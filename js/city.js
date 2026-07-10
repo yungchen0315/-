@@ -57,6 +57,21 @@ function renderCityScreen(container, faction) {
   rateRow.appendChild(el('span', 'rateItem', RESOURCE_ICONS.stone + ' +' + formatNumber(eff.stonePerHour) + '/時'));
   rateRow.appendChild(el('span', 'rateItem', RESOURCE_ICONS.gold + ' +' + formatNumber(eff.goldPerHour) + '/時'));
   summary.appendChild(rateRow);
+
+  const state = window.GameState;
+  if (state) {
+    const tiles = ownedResourceTiles(state, faction.id);
+    if (tiles.length > 0) {
+      const tileYield = ownedTileYieldPerMin(state, faction.id);
+      const tileRow = el('div', 'rateRow tileYieldRow');
+      RESOURCE_TYPES.forEach((r) => {
+        if (tileYield[r] > 0) tileRow.appendChild(el('span', 'rateItem tileYieldItem', RESOURCE_ICONS[r] + ' +' + tileYield[r] + '/分（產地）'));
+      });
+      summary.appendChild(tileRow);
+      summary.appendChild(el('div', 'subHint', '已佔領 ' + tiles.length + ' 個產地，持續固定產出中（不需駐守）。'));
+    }
+  }
+
   const popRow = el('div', 'popRow', '統率上限：' + factionPopUsed(faction) + ' / ' + eff.popCap);
   summary.appendChild(popRow);
   container.appendChild(summary);

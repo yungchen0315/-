@@ -85,6 +85,7 @@ html, body {
 /* ---------------------------------------------------------------------- */
 .resourceSummary .rateRow { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0; font-size: 13px; }
 .rateItem { background: rgba(0,0,0,0.2); padding: 3px 8px; border-radius: 6px; }
+.tileYieldItem { background: rgba(159,209,138,0.15); color: #9fd18a; }
 .popRow { font-size: 12px; color: #bcae8f; }
 .buildingInProgress { border-color: #e0b25a; }
 .eventRow { border-radius: 8px; background: rgba(224,178,90,0.08); padding: 8px; margin-bottom: 6px; font-size: 12px; }

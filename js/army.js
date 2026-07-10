@@ -216,6 +216,36 @@ function resolveArmyArrival(state, faction, army, now) {
       report.text = '進攻 ' + factionById(tile.ownerId).name + ' 主城失利，部隊損失慘重。';
     }
     report.losses = losses;
+  } else if (tile.type === 'resource' && tile.ownerId) {
+    // 已被佔領（含己方）的產地不需再攻打，安全折返即可。
+    startReturn(army, now, faction);
+    report.outcome = 'invalid';
+    report.text = tile.name + '已被佔領，部隊折返。';
+    faction.battleReports.unshift(report);
+    trimReports(faction);
+    return;
+  } else if (tile.type === 'resource') {
+    result = resolveBattle({
+      attackerUnits: army.units, attackerGeneralId: army.generalId, attackerEff: eff, attackerFaction: faction,
+      defenderStaticGuard: tile.guardPower
+    });
+    const { remaining, losses } = applyCasualties(army.units, result.attackerLossRate);
+    army.units = remaining;
+    report.losses = losses;
+    if (result.winner === 'attacker') {
+      const captureMul = 1 + (result.attackerLootBonusPct || 0) / 100;
+      const captureBonus = Math.round(tile.guardPower * 1.5 * captureMul);
+      tile.ownerId = faction.id;
+      const eff2 = factionEffects(faction);
+      faction.resources[tile.resourceType] = clamp(faction.resources[tile.resourceType] + captureBonus, 0, eff2.storageCap[tile.resourceType]);
+      report.outcome = 'win';
+      report.text = '攻佔' + tile.name + '，即刻起持續獲得每分鐘 ' + tile.yieldPerMin + ' ' + RESOURCE_NAMES[tile.resourceType] + '的固定產出。';
+      report.loot = { [tile.resourceType]: captureBonus };
+      if (army.generalId) awardGeneralExp(faction, army.generalId, 30);
+    } else {
+      report.outcome = 'lose';
+      report.text = '進攻' + tile.name + '失利，部隊損失慘重，暫時撤退。';
+    }
   } else {
     result = resolveBattle({
       attackerUnits: army.units, attackerGeneralId: army.generalId, attackerEff: eff, attackerFaction: faction,
@@ -236,14 +266,13 @@ function resolveArmyArrival(state, faction, army, now) {
       const lootMul = 1 + (result.attackerLootBonusPct || 0) / 100;
       const lootBase = Math.round(tile.guardPower * 4 * lootMul);
       const loot = {};
-      if (tile.type === 'resource') { loot[tile.resourceType] = lootBase; faction.resources[tile.resourceType] = clamp(faction.resources[tile.resourceType] + lootBase, 0, factionEffects(faction).storageCap[tile.resourceType]); }
-      else { RESOURCE_TYPES.forEach((r) => { const g = Math.round(lootBase / 4); loot[r] = g; faction.resources[r] = clamp(faction.resources[r] + g, 0, factionEffects(faction).storageCap[r]); }); }
+      RESOURCE_TYPES.forEach((r) => { const g = Math.round(lootBase / 4); loot[r] = g; faction.resources[r] = clamp(faction.resources[r] + g, 0, factionEffects(faction).storageCap[r]); });
       tile.cooldownUntil = now + 10 * 60000;
       report.outcome = 'win';
       report.text = '擊破' + tile.name + '守軍，獲得豐厚資源。';
       report.loot = loot;
       if (army.generalId) awardGeneralExp(faction, army.generalId, 30);
-      if (tile.type === 'monster' && Math.random() < 0.3) {
+      if (Math.random() < 0.3) {
         const dropPool = ITEMS.filter((it) => it.tier <= 3);
         const dropped = choice(dropPool);
         grantItem(faction, dropped.id, 1);
