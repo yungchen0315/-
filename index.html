@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1b2a1e">
+<title>皇者天下（單機版）</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <header id="topBar">
+    <div id="topBarTitle">皇者天下</div>
+    <div id="topBarRes">
+      <span id="topRes_food" class="topResItem"></span>
+      <span id="topRes_wood" class="topResItem"></span>
+      <span id="topRes_stone" class="topResItem"></span>
+      <span id="topRes_gold" class="topResItem"></span>
+    </div>
+    <div id="topPower"></div>
+  </header>
+
+  <main id="screens">
+    <section id="screenCity" class="screen activeScreen"></section>
+
+    <section id="screenMap" class="screen">
+      <div id="mapCanvasWrap"><canvas id="mapCanvas"></canvas></div>
+      <div id="mapInfoPanel" class="panel"></div>
+    </section>
+
+    <section id="screenGenerals" class="screen"></section>
+    <section id="screenArmy" class="screen"></section>
+    <section id="screenCampaign" class="screen"></section>
+    <section id="screenReport" class="screen"></section>
+  </main>
+
+  <nav id="bottomNav">
+    <button class="navBtn navActive" data-screen="city">🏯<span>城池</span></button>
+    <button class="navBtn" data-screen="map">🗺️<span>地圖</span></button>
+    <button class="navBtn" data-screen="generals">🎖️<span>武將</span></button>
+    <button class="navBtn" data-screen="army">⚔️<span>軍隊</span></button>
+    <button class="navBtn" data-screen="campaign">📜<span>戰役</span></button>
+    <button class="navBtn" data-screen="report">📰<span>戰報</span></button>
+  </nav>
+
+  <div id="toastBox"></div>
+
+  <div id="setupOverlay">
+    <div id="setupBox">
+      <div id="setupTitle">皇者天下</div>
+      <div id="setupSubtitle">三國．單機戰略</div>
+      <button id="continueBtn" class="setupBtn">繼續遊戲</button>
+      <button id="newGameBtn" class="setupBtn">開始新遊戲</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/save.js"></script>
+<script src="js/dialog.js"></script>
+<script src="js/items.js"></script>
+<script src="js/skills.js"></script>
+<script src="js/state.js"></script>
+<script src="js/events.js"></script>
+<script src="js/achievements.js"></script>
+<script src="js/research.js"></script>
+<script src="js/army.js"></script>
+<script src="js/city.js"></script>
+<script src="js/generals.js"></script>
+<script src="js/map.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/campaign.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
