@@ -149,7 +149,11 @@ function drawMap() {
         ctx.arc(sx + MapView.tilePx / 2, sy + MapView.tilePx / 2, MapView.tilePx * 0.32, 0, Math.PI * 2);
         ctx.fill();
       } else if (tile.type === 'resource') {
-        if (tile.cooldownUntil > nowMs()) { ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(sx, sy, MapView.tilePx - 1, MapView.tilePx - 1); }
+        if (tile.ownerId) {
+          ctx.strokeStyle = factionById(tile.ownerId).color;
+          ctx.lineWidth = 3;
+          ctx.strokeRect(sx + 2, sy + 2, MapView.tilePx - 5, MapView.tilePx - 5);
+        }
         ctx.fillStyle = '#fff';
         ctx.font = (MapView.tilePx * 0.4) + 'px sans-serif';
         ctx.textAlign = 'center';
@@ -217,7 +221,16 @@ function renderMapInfoPanel() {
   if (tile.type === 'capital') {
     panel.appendChild(el('div', 'subHint', factionById(tile.ownerId).desc));
     if (tile.ownerId === 'shu') { panel.appendChild(el('div', 'subHint', '這是你的主城。')); return; }
-  } else if (tile.type === 'resource' || tile.type === 'monster') {
+  } else if (tile.type === 'resource') {
+    panel.appendChild(el('div', 'subHint', '每分鐘產量：' + RESOURCE_ICONS[tile.resourceType] + tile.yieldPerMin + ' ' + RESOURCE_NAMES[tile.resourceType]));
+    if (tile.ownerId) {
+      panel.appendChild(el('div', 'subHint', tile.ownerId === 'shu'
+        ? '已由你佔領，持續產出中，不需再駐守。'
+        : '已被 ' + factionById(tile.ownerId).name + ' 佔領。'));
+      return;
+    }
+    panel.appendChild(el('div', 'subHint', '尚未有勢力佔領，守備力：約 ' + tile.guardPower + '。擊破守軍即可永久佔領，之後不需再駐守。'));
+  } else if (tile.type === 'monster') {
     const onCooldown = tile.cooldownUntil > nowMs();
     panel.appendChild(el('div', 'subHint', onCooldown
       ? ('據點恢復中：' + formatDuration(tile.cooldownUntil - nowMs()))

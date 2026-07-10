@@ -34,7 +34,8 @@ function generateWorld() {
     t.name = f.name + '主城';
   });
 
-  // 資源點（可派兵駐守的野外採集點，打贏守軍後獲得一次性資源獎勵並進入冷卻）。
+  // 產地：擊破守軍即可永久佔領，之後不需再駐守，會持續以固定的每分鐘產量
+  // 貢獻資源給佔領的勢力（而不是每次攻打都獲得一大筆資源）。
   const resourcePool = ['wood', 'stone', 'gold', 'food'];
   let resourceCount = 0;
   let monsterCount = 0;
@@ -50,8 +51,9 @@ function generateWorld() {
         t.type = 'resource';
         t.resourceType = resourcePool[resourceCount % resourcePool.length];
         t.guardPower = randomInt(40, 160);
-        t.name = RESOURCE_NAMES[t.resourceType] + '礦點';
-        t.cooldownUntil = 0;
+        t.yieldPerMin = Math.max(2, Math.round(t.guardPower / 20));
+        t.name = RESOURCE_NAMES[t.resourceType] + '產地';
+        t.ownerId = null;
         resourceCount++;
       } else if (roll < 0.18 && monsterCount < 14) {
         t.type = 'monster';
@@ -124,7 +126,7 @@ function createNewGame() {
   const starter = factions.shu;
   starter.generals.push(makeGeneralInstance('zhaoyun'));
   starter.armies.push({
-    id: uid('army'), name: '本陣', generalId: 'zhaoyun',
+    id: uid('army'), name: '主力部隊', generalId: 'zhaoyun',
     units: { infantry: 10 }, status: 'garrison',
     departAt: 0, arriveAt: 0, originTileId: null, targetTileId: null, purpose: null
   });
@@ -251,7 +253,7 @@ function advanceTime(state, now) {
 }
 
 function tickFaction(state, faction, now) {
-  applyResourceProduction(faction, now);
+  applyResourceProduction(state, faction, now);
   resolveBuildUpgrade(faction, now);
   resolveTrainQueues(faction, now);
   resolveResearchQueue(faction, now);
@@ -261,16 +263,30 @@ function tickFaction(state, faction, now) {
   if (typeof checkAchievements === 'function') checkAchievements(state, faction);
 }
 
-function applyResourceProduction(faction, now) {
+function applyResourceProduction(state, faction, now) {
   const elapsedMs = now - faction.lastResourceTickAt;
   if (elapsedMs <= 0) { faction.lastResourceTickAt = now; return; }
   const hours = elapsedMs / 3600000;
+  const minutes = elapsedMs / 60000;
   const eff = factionEffects(faction);
-  faction.resources.food = clamp(faction.resources.food + eff.foodPerHour * hours, 0, eff.storageCap.food);
-  faction.resources.wood = clamp(faction.resources.wood + eff.woodPerHour * hours, 0, eff.storageCap.wood);
-  faction.resources.stone = clamp(faction.resources.stone + eff.stonePerHour * hours, 0, eff.storageCap.stone);
-  faction.resources.gold = clamp(faction.resources.gold + eff.goldPerHour * hours, 0, eff.storageCap.gold);
+  const tileYield = ownedTileYieldPerMin(state, faction.id);
+  faction.resources.food = clamp(faction.resources.food + eff.foodPerHour * hours + (tileYield.food || 0) * minutes, 0, eff.storageCap.food);
+  faction.resources.wood = clamp(faction.resources.wood + eff.woodPerHour * hours + (tileYield.wood || 0) * minutes, 0, eff.storageCap.wood);
+  faction.resources.stone = clamp(faction.resources.stone + eff.stonePerHour * hours + (tileYield.stone || 0) * minutes, 0, eff.storageCap.stone);
+  faction.resources.gold = clamp(faction.resources.gold + eff.goldPerHour * hours + (tileYield.gold || 0) * minutes, 0, eff.storageCap.gold);
   faction.lastResourceTickAt = now;
+}
+
+function ownedTileYieldPerMin(state, factionId) {
+  const totals = { food: 0, wood: 0, stone: 0, gold: 0 };
+  Object.values(state.world.tiles).forEach((t) => {
+    if (t.type === 'resource' && t.ownerId === factionId) totals[t.resourceType] += t.yieldPerMin;
+  });
+  return totals;
+}
+
+function ownedResourceTiles(state, factionId) {
+  return Object.values(state.world.tiles).filter((t) => t.type === 'resource' && t.ownerId === factionId);
 }
 
 function resolveBuildUpgrade(faction, now) {

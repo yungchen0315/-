@@ -64,7 +64,8 @@ function aiTryMarch(state, faction, now) {
   const myTile = faction.cityTile;
   const candidates = Object.values(state.world.tiles).filter((t) => {
     if (t.type !== 'resource' && t.type !== 'monster') return false;
-    if (t.cooldownUntil > now) return false;
+    if (t.type === 'resource' && t.ownerId) return false;
+    if (t.type === 'monster' && t.cooldownUntil > now) return false;
     const d = tileDistance(myTile, t);
     return d > 0 && d <= 6 && t.guardPower <= armyUnitCount(home) * 3;
   });
