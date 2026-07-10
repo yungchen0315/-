@@ -37,7 +37,3 @@ function unequipItem(faction, generalId, slot) {
   inst.equipment[slot] = null;
   return { ok: true };
 }
-
-function itemInventoryValue(item) {
-  return item ? item.tier : 0;
-}

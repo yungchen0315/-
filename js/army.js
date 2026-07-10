@@ -398,11 +398,33 @@ function renderArmyScreen(container, faction) {
   armyPanel.appendChild(el('div', 'panelTitle', '駐守部隊'));
   const garrisonArmies = faction.armies.filter((a) => a.status === 'garrison');
   if (garrisonArmies.length === 0) armyPanel.appendChild(el('div', 'emptyHint', '目前沒有駐守部隊。'));
-  garrisonArmies.forEach((army) => { armyPanel.appendChild(buildArmyCard(army, faction)); });
+  garrisonArmies.forEach((army, idx) => { armyPanel.appendChild(buildArmyCard(army, faction, idx === 0)); });
+
+  if (garrisonArmies.length > 0 && armyUnitCount(garrisonArmies[0]) >= 2) {
+    const splitBtn = el('button', 'smallBtn', '拆分部隊（各兵種各半組成新軍）');
+    onTap(splitBtn, () => {
+      const r = formNewArmyFromHalf(faction);
+      if (r.ok) { toast('已組成新部隊「' + r.army.name + '」'); renderArmyScreen(container, faction); } else toast(r.reason);
+    });
+    armyPanel.appendChild(splitBtn);
+  }
   container.appendChild(armyPanel);
 }
 
-function buildArmyCard(army, faction) {
+function formNewArmyFromHalf(faction) {
+  const home = getOrCreateHomeArmy(faction);
+  const unitsWanted = {};
+  Object.keys(home.units).forEach((type) => {
+    const half = Math.floor((home.units[type] || 0) / 2);
+    if (half > 0) unitsWanted[type] = half;
+  });
+  if (Object.keys(unitsWanted).length === 0) return { ok: false, reason: '兵力不足，無法拆分部隊' };
+  const army = createArmyFromGarrison(faction, '第 ' + (faction.armies.length + 1) + ' 軍', null, unitsWanted);
+  if (!army) return { ok: false, reason: '拆分失敗' };
+  return { ok: true, army };
+}
+
+function buildArmyCard(army, faction, isPrimary) {
   const card = el('div', 'armyCard' + (army.status !== 'garrison' ? ' armyCardMarching' : ''));
   const head = el('div', 'armyHead');
   head.appendChild(el('span', 'armyName', army.name));
@@ -413,6 +435,32 @@ function buildArmyCard(army, faction) {
   card.appendChild(unitsLine);
   const general = faction.generals.find((g) => g.id === army.generalId);
   card.appendChild(el('div', 'armyGeneral', general ? '主將：' + generalById(general.id).name : '未指派主將'));
+
+  if (army.status === 'garrison' && faction.generals.length > 0) {
+    const assignRow = el('div', 'generalAssignRow');
+    const select = document.createElement('select');
+    select.className = 'armySelect';
+    const noneOpt = document.createElement('option');
+    noneOpt.value = '';
+    noneOpt.textContent = '（不指派）';
+    select.appendChild(noneOpt);
+    faction.generals.forEach((g) => {
+      const opt = document.createElement('option');
+      opt.value = g.id;
+      opt.textContent = generalById(g.id).name + '（統率上限 ' + generalLeadershipCap(g) + '）';
+      if (g.id === army.generalId) opt.selected = true;
+      select.appendChild(opt);
+    });
+    assignRow.appendChild(select);
+    const assignBtn = el('button', 'smallBtn', '指派主將');
+    onTap(assignBtn, () => {
+      const r = select.value ? assignGeneralToArmy(faction, select.value, army.id) : unassignGeneral(faction, army.id);
+      if (r.ok) { toast('已更新主將'); renderArmyScreen(document.getElementById('screenArmy'), faction); }
+      else toast(r.reason);
+    });
+    assignRow.appendChild(assignBtn);
+    card.appendChild(assignRow);
+  }
 
   if (army.status !== 'garrison') {
     const destName = marchTargetName(army);
@@ -428,6 +476,15 @@ function buildArmyCard(army, faction) {
     const goMapBtn = el('button', 'smallBtn', '前往地圖派兵');
     onTap(goMapBtn, () => { setActiveArmyForMarch(faction, army.id); switchScreen('map'); });
     card.appendChild(goMapBtn);
+    if (!isPrimary) {
+      const disbandBtn = el('button', 'smallBtn disbandBtn', '解散並歸還主力部隊');
+      onTap(disbandBtn, () => {
+        disbandArmyIntoHome(faction, army.id);
+        toast('已解散並歸還兵力');
+        renderArmyScreen(document.getElementById('screenArmy'), faction);
+      });
+      card.appendChild(disbandBtn);
+    }
   }
   return card;
 }
