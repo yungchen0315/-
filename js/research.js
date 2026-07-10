@@ -31,13 +31,13 @@ function canQueueResearch(faction, techId) {
   return { ok: true, tech };
 }
 
-function queueResearch(faction, techId) {
+function queueResearch(faction, techId, now) {
   const check = canQueueResearch(faction, techId);
   if (!check.ok) return check;
   payCost(faction.resources, check.tech.cost);
   const eff = factionEffects(faction);
   const timeMs = Math.round(check.tech.timeMs / (eff.researchSpeedMul || 1));
-  const now = nowMs();
+  now = now || nowMs();
   faction.researchQueue.push({ techId, startAt: now, completeAt: now + timeMs });
   return { ok: true };
 }
