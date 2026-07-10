@@ -1,0 +1,312 @@
+/* ============================================================================
+ * style.css — 直立式手機觸控版面。
+ * ==========================================================================*/
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0; padding: 0;
+  width: 100%; height: 100%;
+  background: #10160f;
+  color: #eee6d3;
+  font-family: 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans TC', sans-serif;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ---------------------------------------------------------------------- */
+/* 頂部狀態列                                                               */
+/* ---------------------------------------------------------------------- */
+#topBar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: linear-gradient(180deg, #2a1e12, #1c140b);
+  border-bottom: 2px solid #4a3620;
+  font-size: 13px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+#topBarTitle { font-weight: bold; color: #e0b25a; font-size: 15px; flex: 0 0 auto; }
+#topBarRes { display: flex; gap: 8px; flex: 1 1 auto; overflow-x: auto; }
+.topResItem { flex: 0 0 auto; background: rgba(0,0,0,0.25); padding: 3px 7px; border-radius: 6px; }
+#topPower { flex: 0 0 auto; color: #9fd18a; font-weight: bold; }
+
+/* ---------------------------------------------------------------------- */
+/* 畫面主體                                                                 */
+/* ---------------------------------------------------------------------- */
+#screens { flex: 1 1 auto; position: relative; overflow: hidden; }
+.screen {
+  position: absolute; inset: 0;
+  display: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px 10px 16px;
+  touch-action: pan-y;
+}
+.screen.activeScreen { display: block; }
+
+#screenMap { display: none; flex-direction: column; padding: 0; touch-action: none; }
+#screenMap.activeScreen { display: flex; }
+#mapCanvasWrap { flex: 1 1 auto; position: relative; min-height: 0; }
+#mapCanvas { display: block; width: 100%; height: 100%; touch-action: none; background: #1b2a1e; }
+#mapInfoPanel { flex: 0 0 auto; max-height: 34vh; overflow-y: auto; touch-action: pan-y; border-top: 2px solid #4a3620; }
+
+/* ---------------------------------------------------------------------- */
+/* 共用面板樣式                                                             */
+/* ---------------------------------------------------------------------- */
+.panel {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+.panelTitle { font-size: 15px; font-weight: bold; color: #e0b25a; margin-bottom: 6px; }
+.subHint { font-size: 12px; color: #bcae8f; margin: 4px 0; }
+.emptyHint { font-size: 12px; color: #8a8070; padding: 6px 0; }
+.timerText { font-family: monospace; color: #9fd18a; }
+
+/* ---------------------------------------------------------------------- */
+/* 城池畫面                                                                 */
+/* ---------------------------------------------------------------------- */
+.resourceSummary .rateRow { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0; font-size: 13px; }
+.rateItem { background: rgba(0,0,0,0.2); padding: 3px 8px; border-radius: 6px; }
+.popRow { font-size: 12px; color: #bcae8f; }
+.buildingInProgress { border-color: #e0b25a; }
+.eventRow { border-radius: 8px; background: rgba(224,178,90,0.08); padding: 8px; margin-bottom: 6px; font-size: 12px; }
+.eventName { font-weight: bold; color: #e0b25a; }
+.eventFlavor { color: #cfead0; margin: 3px 0; }
+.achievementRow { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; font-size: 12px; border-top: 1px solid rgba(255,255,255,0.06); }
+.achievementRow.achievementDone .achievementName { color: #9fd18a; }
+.achievementDesc { color: #8a8070; text-align: right; }
+.techRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid rgba(255,255,255,0.06); font-size: 12px; }
+.techName { flex: 1 1 auto; }
+.techCost { flex: 0 0 auto; color: #bcae8f; font-size: 11px; }
+.techDoneWrap { margin-top: 8px; }
+.smallBtn.disabled { background: #3a3a3a; color: #999; }
+.buildingList { display: flex; flex-direction: column; gap: 8px; }
+.buildingCard {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 10px;
+}
+.buildingHead { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.buildingIcon { font-size: 18px; }
+.buildingName { font-weight: bold; flex: 1 1 auto; }
+.buildingLevel { color: #9fd18a; font-size: 12px; }
+.buildingDesc { font-size: 12px; color: #bcae8f; margin-bottom: 6px; }
+.costLine { display: flex; gap: 8px; margin-top: 6px; font-size: 12px; flex-wrap: wrap; }
+.costItem { background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 5px; }
+.costShort { color: #ff8a8a; }
+
+button, .navBtn, select {
+  font-family: inherit;
+}
+.upgradeBtn, .smallBtn {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-top: 4px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #5a8f4a, #3f6a34);
+  color: #fff;
+  font-size: 13px;
+  font-weight: bold;
+  min-height: 40px;
+}
+.smallBtn { width: auto; padding: 8px 14px; display: inline-block; }
+.upgradeBtn.disabled { background: #3a3a3a; color: #999; }
+
+/* ---------------------------------------------------------------------- */
+/* 武將畫面                                                                 */
+/* ---------------------------------------------------------------------- */
+.generalList { display: flex; flex-direction: column; gap: 8px; }
+.generalCard {
+  background: rgba(255,255,255,0.05);
+  border-left: 4px solid #888;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.generalHead { display: flex; justify-content: space-between; align-items: center; }
+.generalName { font-weight: bold; font-size: 14px; }
+.generalLevel { color: #e0b25a; font-size: 12px; }
+.generalStats { font-size: 12px; color: #cfead0; margin: 4px 0; }
+.generalSkill { font-size: 12px; color: #f0d38a; margin-bottom: 4px; }
+.expBarWrap { height: 5px; background: rgba(0,0,0,0.3); border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
+.expBar { height: 100%; background: #9fd18a; }
+.generalAssign { font-size: 12px; color: #bcae8f; }
+.equipLine { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.equipChip { font-size: 11px; background: rgba(0,0,0,0.25); color: #8a8070; padding: 3px 8px; border-radius: 10px; }
+.equipChip.equipChipFilled { background: rgba(224,178,90,0.2); color: #e0b25a; }
+.exploreRow, .exploreTargetRow, .queueRow, .campaignFightRow {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 0; border-top: 1px solid rgba(255,255,255,0.06);
+  font-size: 13px; gap: 8px;
+}
+
+/* ---------------------------------------------------------------------- */
+/* 軍隊畫面                                                                 */
+/* ---------------------------------------------------------------------- */
+.trainBuildingBox { margin-bottom: 10px; }
+.trainBuildingTitle { font-weight: bold; margin: 6px 0 4px; color: #e0b25a; }
+.trainUnitRow { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; }
+.trainUnitRow.locked { opacity: 0.5; }
+.unitIcon { font-size: 16px; }
+.unitName { flex: 0 0 auto; min-width: 46px; }
+.unitCost { flex: 1 1 auto; color: #bcae8f; font-size: 11px; }
+.lockedHint { font-size: 11px; color: #8a8070; }
+.armyCard {
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+.armyHead { display: flex; justify-content: space-between; font-weight: bold; }
+.armyStatus { color: #9fd18a; font-size: 12px; }
+.armyUnits { font-size: 13px; margin: 4px 0; }
+.armyGeneral { font-size: 12px; color: #bcae8f; margin-bottom: 4px; }
+
+/* ---------------------------------------------------------------------- */
+/* 戰役畫面                                                                 */
+/* ---------------------------------------------------------------------- */
+.campaignCard {
+  background: rgba(255,255,255,0.05);
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+.epicCard { border: 1px solid #e0b25a; background: rgba(224,178,90,0.08); }
+.campaignName { font-weight: bold; font-size: 14px; margin-bottom: 4px; }
+.campaignFlavor { font-size: 12px; color: #cfead0; margin-bottom: 6px; }
+.campaignEnemy, .campaignReward { font-size: 12px; color: #bcae8f; margin-bottom: 4px; }
+.campaignDoneRow { font-size: 13px; color: #9fd18a; padding: 3px 0; }
+.armySelect { flex: 1 1 auto; background: #2a1e12; color: #eee6d3; border: 1px solid #4a3620; border-radius: 6px; padding: 6px; font-size: 12px; }
+
+/* ---------------------------------------------------------------------- */
+/* 戰報                                                                    */
+/* ---------------------------------------------------------------------- */
+.reportRow { border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; font-size: 13px; }
+.reportWin { background: rgba(63,138,64,0.18); border-left: 3px solid #6cbf5a; }
+.reportLose { background: rgba(160,60,60,0.18); border-left: 3px solid #d05a5a; }
+.reportNeutral { background: rgba(255,255,255,0.05); border-left: 3px solid #888; }
+.reportTime { font-size: 10px; color: #8a8070; margin-top: 2px; }
+
+/* ---------------------------------------------------------------------- */
+/* 底部導覽                                                                 */
+/* ---------------------------------------------------------------------- */
+#bottomNav {
+  flex: 0 0 auto;
+  display: flex;
+  background: linear-gradient(0deg, #2a1e12, #1c140b);
+  border-top: 2px solid #4a3620;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.navBtn {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  color: #bcae8f;
+  font-size: 18px;
+  padding: 8px 0 6px;
+  min-height: 52px;
+}
+.navBtn span { font-size: 11px; }
+.navBtn.navActive { color: #e0b25a; }
+
+/* ---------------------------------------------------------------------- */
+/* Toast                                                                   */
+/* ---------------------------------------------------------------------- */
+#toastBox {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 46px);
+  left: 0; right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  z-index: 50;
+}
+.toast {
+  background: rgba(0,0,0,0.8);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  opacity: 1;
+  transition: opacity 0.25s;
+}
+.toastOut { opacity: 0; }
+
+/* ---------------------------------------------------------------------- */
+/* 開局／繼續遊戲 覆蓋層                                                     */
+/* ---------------------------------------------------------------------- */
+#setupOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 50% 30%, #2a1e12, #10160f 70%);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+#setupOverlay.activeOverlay { display: flex; }
+#setupBox { text-align: center; padding: 20px; }
+#setupTitle { font-size: 30px; font-weight: bold; color: #e0b25a; letter-spacing: 4px; margin-bottom: 6px; }
+#setupSubtitle { font-size: 13px; color: #bcae8f; margin-bottom: 30px; }
+.setupBtn {
+  display: block;
+  width: 220px;
+  margin: 0 auto 14px;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #e0b25a, #b5883a);
+  color: #2a1e12;
+  font-size: 16px;
+  font-weight: bold;
+}
+#continueBtn { background: linear-gradient(180deg, #5a8f4a, #3f6a34); color: #fff; }
+
+/* ---------------------------------------------------------------------- */
+/* 自訂確認對話框                                                            */
+/* ---------------------------------------------------------------------- */
+.confirmOverlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.confirmBox {
+  background: #201810;
+  border: 1px solid #4a3620;
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 320px;
+  width: 100%;
+}
+.confirmMessage { font-size: 14px; color: #eee6d3; margin-bottom: 18px; text-align: center; line-height: 1.5; }
+.confirmBtnRow { display: flex; gap: 10px; }
+.confirmBtnRow .setupBtn { flex: 1 1 0; width: auto; margin: 0; padding: 11px; font-size: 14px; }
+.confirmCancelBtn { background: #3a3a3a; color: #ddd; }
