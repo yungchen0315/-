@@ -1,20 +1,44 @@
 /* ============================================================================
- * gameLoopSystem.js — 【骨架，尚未實作】
- *
- * 規劃職責：
- *   - advanceTime(saveGame, now)：依序呼叫 economySystem／cityBuildingSystem／
- *     armySystem／technologySystem／eventSystem／achievementSystem 對每個
- *     PlayerState 做結算，並在到期時呼叫 aiSystem。這是唯一的時間推進入口，
- *     線上每秒 tick 與離線進度追趕都呼叫同一個函式，只是 now 與上次推進時間的
- *     差距不同——不需要另外寫一套「補幀」邏輯。
- *   - 所有內部迴圈都必須有上限（例如離線很久時 AI tick 的追趕次數上限），
- *     確保極端情況下遊戲仍可穩定運行，不會卡死或無限迴圈。
- *
- * 對應舊版 js/state.js 的 advanceTime() / tickFaction()。
+ * gameLoopSystem.js — 唯一的時間推進入口。線上每秒 tick 與離線進度追趕都呼叫
+ * 同一個 advanceTime()，差異只在 now 與上次推進時間的差距，不需要另外寫一套
+ * 補幀邏輯。對應舊版 js/state.js 的 advanceTime() / tickFaction()。
  * ==========================================================================*/
 
 (function () {
-  window.Game.Systems.GameLoop = {
-    // advanceTime(saveGame, now) { ... }
-  };
+  const AI_TICK_INTERVAL_MS = 5 * 60000;
+  const AI_TICK_MAX_CATCHUP = 2000; // 離線追趕上限，避免長時間離線造成無限迴圈
+
+  /**
+   * @param {SaveGame} saveGame
+   * @param {number} now
+   */
+  function advanceTime(saveGame, now) {
+    Object.values(saveGame.players).forEach((playerState) => tickPlayer(saveGame, playerState, now));
+
+    let iterations = 0;
+    while (now >= saveGame.nextAiTickAt && iterations < AI_TICK_MAX_CATCHUP) {
+      window.Game.Systems.Ai.tick(saveGame, saveGame.nextAiTickAt);
+      saveGame.nextAiTickAt += AI_TICK_INTERVAL_MS;
+      iterations++;
+    }
+    if (now >= saveGame.nextAiTickAt) saveGame.nextAiTickAt = now + AI_TICK_INTERVAL_MS;
+
+    saveGame.lastActiveAt = now;
+  }
+
+  function tickPlayer(saveGame, playerState, now) {
+    window.Game.Systems.Economy.tick(saveGame, playerState, now);
+    Object.values(playerState.cities).forEach((city) => {
+      window.Game.Systems.CityBuilding.resolveUpgrades(city, now);
+      window.Game.Systems.Army.resolveTrainQueues(playerState, city, now);
+    });
+    window.Game.Systems.Technology.resolveResearch(playerState, now);
+    window.Game.Systems.Hero.resolveExplorations(playerState, now);
+    window.Game.Systems.Army.resolveArmies(saveGame, playerState, now);
+    window.Game.Systems.Event.tick(playerState, now);
+    window.Game.Systems.Mission.refreshMissionStatuses(playerState);
+    window.Game.Systems.Achievement.checkAchievements(playerState);
+  }
+
+  window.Game.Systems.GameLoop = { advanceTime };
 })();
