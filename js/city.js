@@ -36,12 +36,6 @@ function startUpgrade(faction, type) {
   return { ok: true };
 }
 
-function speedUpBuildInstant(faction) {
-  if (!faction.activeBuildUpgrade) return false;
-  faction.activeBuildUpgrade.completeAt = nowMs();
-  return true;
-}
-
 /* ---------------------------------------------------------------------- */
 /* 畫面渲染                                                                 */
 /* ---------------------------------------------------------------------- */

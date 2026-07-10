@@ -66,16 +66,36 @@ function generalEffectiveStats(inst) {
   };
 }
 
+const LEADERSHIP_PER_CMD = 5;
+
+function generalLeadershipCap(inst) {
+  return generalEffectiveStats(inst).cmd * LEADERSHIP_PER_CMD;
+}
+
 function assignGeneralToArmy(faction, generalId, armyId) {
   const inst = faction.generals.find((g) => g.id === generalId);
   if (!inst) return { ok: false, reason: '找不到武將' };
   const army = faction.armies.find((a) => a.id === armyId);
   if (!army) return { ok: false, reason: '找不到部隊' };
   if (army.status !== 'garrison') return { ok: false, reason: '部隊行軍中，無法更換主將' };
+  const cap = generalLeadershipCap(inst);
+  const used = armyLeadershipUsed(army);
+  if (used > cap) return { ok: false, reason: generalById(generalId).name + '統率上限為 ' + cap + '，此部隊統率需求為 ' + used + '，請先精簡兵力' };
   faction.armies.forEach((a) => { if (a.generalId === generalId) a.generalId = null; });
   faction.generals.forEach((g) => { if (g.assignedArmyId === armyId) g.assignedArmyId = null; });
   army.generalId = generalId;
   inst.assignedArmyId = armyId;
+  return { ok: true };
+}
+
+function unassignGeneral(faction, armyId) {
+  const army = faction.armies.find((a) => a.id === armyId);
+  if (!army) return { ok: false, reason: '找不到部隊' };
+  if (army.generalId) {
+    const inst = faction.generals.find((g) => g.id === army.generalId);
+    if (inst) inst.assignedArmyId = null;
+  }
+  army.generalId = null;
   return { ok: true };
 }
 
@@ -99,6 +119,7 @@ function renderGeneralsScreen(container, faction) {
     head.appendChild(el('span', 'generalLevel', 'Lv.' + inst.level));
     card.appendChild(head);
     card.appendChild(el('div', 'generalStats', '武力 ' + stats.force + '　統率 ' + stats.cmd + '　智力 ' + stats.intel));
+    card.appendChild(el('div', 'generalCap', '統率上限：可率領兵力總統率需求 ' + generalLeadershipCap(inst) + ' 以內'));
     card.appendChild(el('div', 'generalSkill', '【' + def.skill.name + '】' + def.skill.desc));
     const expNeeded = expNeededForLevel(inst.level);
     const expBarWrap = el('div', 'expBarWrap');

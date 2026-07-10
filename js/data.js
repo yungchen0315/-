@@ -487,7 +487,8 @@ const ACHIEVEMENTS = [
   { id: 'all_missions', name: '天下歸一', desc: '完成全部主線戰役關卡', reward: { resources: { gold: 2000, food: 1000, wood: 1000, stone: 1000 } },
     check: (f, state) => state.campaignProgress.completedIds.length >= CAMPAIGNS.length },
   { id: 'first_item', name: '寶物初現', desc: '取得第一件裝備', reward: { resources: { gold: 150 } },
-    check: (f) => f.inventory && f.inventory.length >= 1 },
+    check: (f) => (f.inventory && Object.values(f.inventory).some((qty) => qty > 0)) ||
+      f.generals.some((g) => g.equipment && Object.values(g.equipment).some(Boolean)) },
   { id: 'full_equip', name: '披堅執銳', desc: '讓任一武將裝備滿四個部位', reward: { resources: { gold: 500 } },
     check: (f) => f.generals.some((g) => g.equipment && ITEM_SLOTS.every((s) => g.equipment[s])) }
 ];

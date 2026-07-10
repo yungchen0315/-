@@ -152,6 +152,9 @@ button, .navBtn, select {
 .expBarWrap { height: 5px; background: rgba(0,0,0,0.3); border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
 .expBar { height: 100%; background: #9fd18a; }
 .generalAssign { font-size: 12px; color: #bcae8f; }
+.generalCap { font-size: 11px; color: #8a8070; margin-bottom: 4px; }
+.generalAssignRow { display: flex; gap: 6px; margin: 6px 0; }
+.generalAssignRow .armySelect { flex: 1 1 auto; }
 .equipLine { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .equipChip { font-size: 11px; background: rgba(0,0,0,0.25); color: #8a8070; padding: 3px 8px; border-radius: 10px; }
 .equipChip.equipChipFilled { background: rgba(224,178,90,0.2); color: #e0b25a; }
@@ -183,6 +186,7 @@ button, .navBtn, select {
 .armyUnits { font-size: 13px; margin: 4px 0; }
 .armyGeneral { font-size: 12px; color: #bcae8f; margin-bottom: 4px; }
 .armyCardMarching { border: 1px solid rgba(224,178,90,0.4); background: rgba(224,178,90,0.06); }
+.disbandBtn { background: linear-gradient(180deg, #7a5a3a, #5a3f24); margin-top: 4px; }
 .armyDestination { font-size: 12px; color: #e0b25a; margin-bottom: 4px; }
 .marchBarWrap { height: 6px; background: rgba(0,0,0,0.3); border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
 .marchBar { height: 100%; background: linear-gradient(90deg, #e0b25a, #9fd18a); transition: width 0.3s linear; }
