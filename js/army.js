@@ -2,7 +2,7 @@
  * army.js — 部隊編成、行軍、戰鬥結算（即時公式）與戰報。
  * ==========================================================================*/
 
-const MARCH_MS_PER_TILE = 45000; // 基準：速度 5 的部隊，每格地圖耗時 45 秒
+const MARCH_MS_PER_TILE = 16000; // 基準：速度 5 的部隊，每格地圖耗時 16 秒
 
 function tileDistance(a, b) { return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)); }
 
@@ -357,29 +357,60 @@ function renderArmyScreen(container, faction) {
   });
   container.appendChild(trainPanel);
 
+  const marchingArmies = faction.armies.filter((a) => a.status !== 'garrison');
+  if (marchingArmies.length > 0) {
+    const marchPanel = el('div', 'panel marchPanel');
+    marchPanel.appendChild(el('div', 'panelTitle', '行軍中部隊（' + marchingArmies.length + '）'));
+    marchingArmies.forEach((army) => { marchPanel.appendChild(buildArmyCard(army, faction)); });
+    container.appendChild(marchPanel);
+  }
+
   const armyPanel = el('div', 'panel');
-  armyPanel.appendChild(el('div', 'panelTitle', '部隊列表'));
-  faction.armies.forEach((army) => {
-    const card = el('div', 'armyCard');
-    const head = el('div', 'armyHead');
-    head.appendChild(el('span', 'armyName', army.name));
-    head.appendChild(el('span', 'armyStatus', armyStatusLabel(army)));
-    card.appendChild(head);
-    const unitsLine = el('div', 'armyUnits', Object.keys(army.units).filter((u) => army.units[u] > 0)
-      .map((u) => unitDef(u).icon + army.units[u]).join(' ') || '（無兵力）');
-    card.appendChild(unitsLine);
-    const general = faction.generals.find((g) => g.id === army.generalId);
-    card.appendChild(el('div', 'armyGeneral', general ? '主將：' + generalById(general.id).name : '未指派主將'));
-    if (army.status !== 'garrison') {
-      card.appendChild(el('div', 'timerText', '預計 ' + formatDuration(Math.max(0, army.arriveAt - nowMs())) + ' 後' + (army.status === 'marching' ? '抵達' : '返回')));
-    } else {
-      const goMapBtn = el('button', 'smallBtn', '前往地圖派兵');
-      onTap(goMapBtn, () => { setActiveArmyForMarch(faction, army.id); switchScreen('map'); });
-      card.appendChild(goMapBtn);
-    }
-    armyPanel.appendChild(card);
-  });
+  armyPanel.appendChild(el('div', 'panelTitle', '駐守部隊'));
+  const garrisonArmies = faction.armies.filter((a) => a.status === 'garrison');
+  if (garrisonArmies.length === 0) armyPanel.appendChild(el('div', 'emptyHint', '目前沒有駐守部隊。'));
+  garrisonArmies.forEach((army) => { armyPanel.appendChild(buildArmyCard(army, faction)); });
   container.appendChild(armyPanel);
+}
+
+function buildArmyCard(army, faction) {
+  const card = el('div', 'armyCard' + (army.status !== 'garrison' ? ' armyCardMarching' : ''));
+  const head = el('div', 'armyHead');
+  head.appendChild(el('span', 'armyName', army.name));
+  head.appendChild(el('span', 'armyStatus', armyStatusLabel(army)));
+  card.appendChild(head);
+  const unitsLine = el('div', 'armyUnits', Object.keys(army.units).filter((u) => army.units[u] > 0)
+    .map((u) => unitDef(u).icon + army.units[u]).join(' ') || '（無兵力）');
+  card.appendChild(unitsLine);
+  const general = faction.generals.find((g) => g.id === army.generalId);
+  card.appendChild(el('div', 'armyGeneral', general ? '主將：' + generalById(general.id).name : '未指派主將'));
+
+  if (army.status !== 'garrison') {
+    const destName = marchTargetName(army);
+    card.appendChild(el('div', 'armyDestination', (army.status === 'marching' ? '目的地：' : '返回：') + destName));
+    const progress = clamp((nowMs() - army.departAt) / Math.max(1, army.arriveAt - army.departAt), 0, 1);
+    const barWrap = el('div', 'marchBarWrap');
+    const bar = el('div', 'marchBar');
+    bar.style.width = Math.round(progress * 100) + '%';
+    barWrap.appendChild(bar);
+    card.appendChild(barWrap);
+    card.appendChild(el('div', 'timerText', '預計 ' + formatDuration(Math.max(0, army.arriveAt - nowMs())) + ' 後' + (army.status === 'marching' ? '抵達' : '返回')));
+  } else {
+    const goMapBtn = el('button', 'smallBtn', '前往地圖派兵');
+    onTap(goMapBtn, () => { setActiveArmyForMarch(faction, army.id); switchScreen('map'); });
+    card.appendChild(goMapBtn);
+  }
+  return card;
+}
+
+function marchTargetName(army) {
+  const state = window.GameState;
+  if (!state) return '未知地點';
+  const key = army.status === 'marching' ? army.targetTileId : army.originTileId;
+  const tile = key ? state.world.tiles[key] : null;
+  if (!tile) return army.status === 'marching' ? '未知地點' : '本城';
+  if (army.status === 'returning') return tile.type === 'capital' ? '本城' : tile.name || '本城';
+  return tile.name || (tile.type === 'capital' ? factionById(tile.ownerId).name + '主城' : '未知地點');
 }
 
 function renderReportScreen(container, faction) {
