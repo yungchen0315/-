@@ -108,18 +108,39 @@
     } else {
       playerState.pendingEvents.forEach((ev) => {
         const eventType = D.eventTypeDefById(ev.eventTypeDefId);
+        const Event = window.Game.Systems.Event;
         const row = U.el('div', 'eventRow');
         row.appendChild(U.el('div', 'eventName', eventType.name));
         row.appendChild(U.el('div', 'eventFlavor', eventType.flavor));
         row.appendChild(U.el('div', 'timerText', '剩餘 ' + formatCountdown(Math.max(0, ev.deadlineAt - U.now()))));
-        const btn = U.el('button', 'smallBtn', '立即處理');
-        U.onTap(btn, () => {
-          window.Game.Systems.Event.claimEventNow(playerState, ev.id);
-          Dlg.toast('事件已處理');
-          render(container, window.GameSave, playerState);
-          window.Game.UI.TopBar.refresh(playerState);
-        });
-        row.appendChild(btn);
+
+        if (eventType.tradeOptions && eventType.tradeOptions.length) {
+          const tradeRow = U.el('div', 'eventTradeRow');
+          eventType.tradeOptions.forEach((opt, idx) => {
+            const affordable = Event.tradeOptionAffordable(playerState, opt);
+            const label = Event.describeAmounts(opt.give) + ' → ' + Event.describeAmounts(opt.get);
+            const btn = U.el('button', 'smallBtn' + (affordable ? '' : ' disabled'), label);
+            if (affordable) {
+              U.onTap(btn, () => {
+                const r = Event.resolveTrade(playerState, ev.id, idx);
+                Dlg.toast(r.ok ? Event.describeOutcome(r) : r.reason);
+                render(container, window.GameSave, playerState);
+                window.Game.UI.TopBar.refresh(playerState);
+              });
+            }
+            tradeRow.appendChild(btn);
+          });
+          row.appendChild(tradeRow);
+        } else {
+          const btn = U.el('button', 'smallBtn', '立即處理');
+          U.onTap(btn, () => {
+            const r = Event.claimEventNow(playerState, ev.id);
+            Dlg.toast(r.ok ? Event.describeOutcome(r.outcome) : r.reason);
+            render(container, window.GameSave, playerState);
+            window.Game.UI.TopBar.refresh(playerState);
+          });
+          row.appendChild(btn);
+        }
         panel.appendChild(row);
       });
     }

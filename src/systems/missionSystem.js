@@ -9,16 +9,16 @@
 
   /** 依前置關卡是否完成，把符合條件的關卡狀態從 'locked' 更新為 'available'。 */
   function refreshMissionStatuses(playerState) {
-    D.MISSION_DEFS.forEach((mission) => {
+    D.missionDefsForFaction(playerState.factionId).forEach((mission) => {
       const state = playerState.missions[mission.id];
-      if (state.status === 'completed') return;
+      if (!state || state.status === 'completed') return;
       const unlocked = mission.requires.every((r) => playerState.missions[r].status === 'completed');
       state.status = unlocked ? 'available' : 'locked';
     });
   }
 
   function unlockedMissions(playerState) {
-    return D.MISSION_DEFS.filter((m) => playerState.missions[m.id].status === 'available');
+    return D.missionDefsForFaction(playerState.factionId).filter((m) => playerState.missions[m.id].status === 'available');
   }
 
   /**

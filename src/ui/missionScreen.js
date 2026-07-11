@@ -12,12 +12,13 @@
     const Mission = window.Game.Systems.Mission;
     const Army = window.Game.Systems.Army;
 
+    const factionMissions = D.missionDefsForFaction(playerState.factionId);
     const missionStates = Object.values(playerState.missions);
     const completed = missionStates.filter((m) => m.status === 'completed');
-    const available = D.MISSION_DEFS.filter((m) => playerState.missions[m.id].status === 'available');
+    const available = factionMissions.filter((m) => playerState.missions[m.id].status === 'available');
 
     const progressPanel = U.el('div', 'panel');
-    progressPanel.appendChild(U.el('div', 'panelTitle', '戰役進度：' + completed.length + ' / ' + D.MISSION_DEFS.length));
+    progressPanel.appendChild(U.el('div', 'panelTitle', '戰役進度：' + completed.length + ' / ' + factionMissions.length));
     container.appendChild(progressPanel);
 
     const listPanel = U.el('div', 'panel');
@@ -59,7 +60,7 @@
             defenderHeroStateId: r.defenderHeroStateId,
             defenderUnitsBefore: r.defenderUnitsBefore,
             defenderName: r.defenderName,
-            defenderFactionId: 'wei',
+            defenderFactionId: mission.enemy.factionId,
             timeline: r.result.timeline,
             win: r.win,
             resultText: r.battle.text

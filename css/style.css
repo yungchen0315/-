@@ -91,6 +91,8 @@ html, body {
 .eventRow { border-radius: 8px; background: rgba(224,178,90,0.08); padding: 8px; margin-bottom: 6px; font-size: 12px; }
 .eventName { font-weight: bold; color: #e0b25a; }
 .eventFlavor { color: #cfead0; margin: 3px 0; }
+.eventTradeRow { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+.eventTradeRow .smallBtn { width: 100%; }
 .achievementRow { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; font-size: 12px; border-top: 1px solid rgba(255,255,255,0.06); }
 .achievementRow.achievementDone .achievementName { color: #9fd18a; }
 .achievementDesc { color: #8a8070; text-align: right; }
@@ -306,6 +308,17 @@ button, .navBtn, select {
   font-weight: bold;
 }
 #continueBtn { background: linear-gradient(180deg, #5a8f4a, #3f6a34); color: #fff; }
+
+#factionPickList { display: flex; flex-direction: column; gap: 12px; width: 260px; margin: 0 auto; }
+.factionPickCard {
+  border: 2px solid #7a7a7a;
+  border-radius: 10px;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.04);
+  text-align: left;
+}
+.factionPickName { font-size: 18px; font-weight: bold; margin-bottom: 4px; }
+.factionPickDesc { font-size: 12px; color: #cfc4a8; line-height: 1.5; }
 
 /* ---------------------------------------------------------------------- */
 /* 自訂確認對話框                                                            */
