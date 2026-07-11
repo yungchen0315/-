@@ -21,22 +21,23 @@
       if (!def) return;
       const stats = Hero.effectiveStats(heroState);
       const card = U.el('div', 'generalCard');
-      card.style.borderLeftColor = def.portraitColor;
+      card.appendChild(window.Game.UI.HeroPortrait.heroPortraitEl(def));
+      const body = U.el('div', 'generalBody');
       const head = U.el('div', 'generalHead');
       head.appendChild(U.el('span', 'generalName', def.name));
       head.appendChild(U.el('span', 'generalLevel', 'Lv.' + heroState.level));
-      card.appendChild(head);
-      card.appendChild(U.el('div', 'generalStats', '武力 ' + stats.force + '　統率 ' + stats.cmd + '　智力 ' + stats.intel));
-      card.appendChild(U.el('div', 'generalCap', '統率上限：可率領兵力總統率需求 ' + Hero.leadershipCap(heroState) + ' 以內'));
-      card.appendChild(U.el('div', 'generalSkill', '【' + def.skill.name + '】' + def.skill.desc));
+      body.appendChild(head);
+      body.appendChild(U.el('div', 'generalStats', '武力 ' + stats.force + '　統率 ' + stats.cmd + '　智力 ' + stats.intel));
+      body.appendChild(U.el('div', 'generalCap', '統率上限：可率領兵力總統率需求 ' + Hero.leadershipCap(heroState) + ' 以內'));
+      body.appendChild(U.el('div', 'generalSkill', '【' + def.skill.name + '】' + def.skill.desc));
       const expNeeded = Hero.expNeededForLevel(heroState.level);
       const expBarWrap = U.el('div', 'expBarWrap');
       const expBar = U.el('div', 'expBar');
       expBar.style.width = Math.min(100, (heroState.exp / expNeeded) * 100) + '%';
       expBarWrap.appendChild(expBar);
-      card.appendChild(expBarWrap);
+      body.appendChild(expBarWrap);
       const assignedArmy = playerState.armies[heroState.assignedArmyId];
-      card.appendChild(U.el('div', 'generalAssign', assignedArmy ? '領軍：' + assignedArmy.name : '未領軍'));
+      body.appendChild(U.el('div', 'generalAssign', assignedArmy ? '領軍：' + assignedArmy.name : '未領軍'));
 
       const equipLine = U.el('div', 'equipLine');
       D.ITEM_SLOTS.forEach((slot) => {
@@ -47,7 +48,8 @@
         }
         equipLine.appendChild(chip);
       });
-      card.appendChild(equipLine);
+      body.appendChild(equipLine);
+      card.appendChild(body);
       rosterListEl.appendChild(card);
     });
     if (heroList.length === 0) rosterListEl.appendChild(U.el('div', 'emptyHint', '尚無武將，請完成戰役或派遣探索。'));

@@ -143,7 +143,13 @@ button, .navBtn, select {
   border-left: 4px solid #888;
   border-radius: 8px;
   padding: 8px 10px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
 }
+.generalBody { flex: 1 1 auto; min-width: 0; }
+.heroPortraitBox { flex: 0 0 auto; width: 52px; }
+.heroPortraitSvg { width: 100%; height: auto; display: block; }
 .generalHead { display: flex; justify-content: space-between; align-items: center; }
 .generalName { font-weight: bold; font-size: 14px; }
 .generalLevel { color: #e0b25a; font-size: 12px; }
