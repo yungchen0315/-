@@ -1,5 +1,6 @@
 /* ============================================================================
- * heroScreen.js — 「武將」分頁：名錄、酒館探索、裝備庫。對應舊版 js/generals.js。
+ * heroScreen.js — 「武將」分頁：名錄、裝備庫。對應舊版 js/generals.js。
+ * 武將的取得（劇情解鎖／酒館招募）改到「招募」分頁（src/ui/gachaScreen.js）。
  * ==========================================================================*/
 
 (function () {
@@ -52,40 +53,9 @@
       card.appendChild(body);
       rosterListEl.appendChild(card);
     });
-    if (heroList.length === 0) rosterListEl.appendChild(U.el('div', 'emptyHint', '尚無武將，請完成戰役或派遣探索。'));
+    if (heroList.length === 0) rosterListEl.appendChild(U.el('div', 'emptyHint', '尚無武將，請完成戰役解鎖，或前往「招募」分頁在酒館招募。'));
     rosterPanel.appendChild(rosterListEl);
     container.appendChild(rosterPanel);
-
-    const explorePanel = U.el('div', 'panel');
-    explorePanel.appendChild(U.el('div', 'panelTitle', '酒館探索（每次 150 銀兩，非抽卡機率，保證取得指定武將）'));
-    const eff = window.Game.Systems.Economy.computeEffects(playerState);
-    explorePanel.appendChild(U.el('div', 'subHint', '探索隊：' + playerState.explorations.length + ' / ' + eff.exploreSlots));
-
-    playerState.explorations.forEach((job) => {
-      const def = D.heroDefById(job.heroDataId);
-      const row = U.el('div', 'exploreRow');
-      row.appendChild(U.el('span', '', '探索中：' + def.name));
-      row.appendChild(U.el('span', 'timerText', U.formatCountdown(Math.max(0, job.completeAt - U.now()))));
-      explorePanel.appendChild(row);
-    });
-
-    const targets = Hero.availableExploreTargets(playerState);
-    const targetList = U.el('div', 'exploreTargetList');
-    targets.forEach((def) => {
-      const row = U.el('div', 'exploreTargetRow');
-      row.appendChild(U.el('span', '', def.name + '（' + D.exploreTileDefByTag(def.source.tileTag).name + '）'));
-      const btn = U.el('button', 'smallBtn', '派遣');
-      U.onTap(btn, () => {
-        const r = Hero.startExplore(playerState, def.id, U.now());
-        if (r.ok) { Dlg.toast('已派出探索隊前往' + D.exploreTileDefByTag(def.source.tileTag).name); render(container, saveGame, playerState); window.Game.UI.TopBar.refresh(playerState); }
-        else Dlg.toast(r.reason);
-      });
-      row.appendChild(btn);
-      targetList.appendChild(row);
-    });
-    if (targets.length === 0) targetList.appendChild(U.el('div', 'emptyHint', '暫無可探索的武將，請推進主線劇情解鎖更多據點。'));
-    explorePanel.appendChild(targetList);
-    container.appendChild(explorePanel);
 
     const invPanel = U.el('div', 'panel');
     invPanel.appendChild(U.el('div', 'panelTitle', '裝備庫（戰役獎勵／擊破據點取得）'));

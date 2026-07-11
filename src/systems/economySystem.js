@@ -22,8 +22,7 @@
       popCap: 20,
       trainSpeedMul: { barracks: 1, drillground: 1, workshop: 1 },
       researchSpeedMul: 1,
-      exploreSlots: 1,
-      exploreSpeedMul: 1,
+      gachaDiscountPct: 0,
       defenseBonusPct: 0,
       garrisonDefMul: 1,
       unitAtkPct: {},
@@ -50,8 +49,7 @@
         if (e.popCap) eff.popCap = Math.max(eff.popCap, e.popCap);
         if (e.trainSpeedMul && (type === 'barracks' || type === 'drillground' || type === 'workshop')) eff.trainSpeedMul[type] = e.trainSpeedMul;
         if (e.researchSpeedMul) eff.researchSpeedMul = e.researchSpeedMul;
-        if (e.exploreSlots) eff.exploreSlots = e.exploreSlots;
-        if (e.exploreSpeedMul) eff.exploreSpeedMul = e.exploreSpeedMul;
+        if (e.gachaDiscountPct) eff.gachaDiscountPct = Math.max(eff.gachaDiscountPct, e.gachaDiscountPct);
         if (e.defenseBonusPct) eff.defenseBonusPct += e.defenseBonusPct;
         if (e.garrisonDefMul) eff.garrisonDefMul = e.garrisonDefMul;
         if (e.unlockTechTier) eff.maxAcademyTier = Math.max(eff.maxAcademyTier, e.unlockTechTier);
@@ -77,8 +75,9 @@
       if (e.allDefPct) eff.allDefPct += e.allDefPct;
       if (e.wallDefPct) eff.wallDefPct += e.wallDefPct;
       if (e.trainSpeedPct) eff.trainSpeedPct += e.trainSpeedPct;
-      if (e.exploreSpeedPct) eff.exploreSpeedMul *= 1 + e.exploreSpeedPct / 100;
+      if (e.gachaDiscountPct) eff.gachaDiscountPct += e.gachaDiscountPct;
     });
+    eff.gachaDiscountPct = U.clamp(eff.gachaDiscountPct, 0, 60);
 
     D.RESOURCE_TYPES.forEach((r) => { eff.storageCap[r] = Math.round(eff.storageCap[r]); });
     return eff;

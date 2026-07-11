@@ -52,8 +52,8 @@
       cost: { stone: 250, wood: 100 }, effect: { wallDefPct: 10 }, requires: [] },
     { id: 'masonry2', name: '築城術·二', category: 'city', tier: 3, timeMs: 15 * 60000,
       cost: { stone: 600, gold: 300 }, effect: { wallDefPct: 15 }, requires: ['masonry1'] },
-    { id: 'scouting1', name: '探查術·一', category: 'city', tier: 1, timeMs: 4 * 60000,
-      cost: { food: 100, gold: 100 }, effect: { exploreSpeedPct: 15 }, requires: [] }
+    { id: 'scouting1', name: '訪賢術·一', category: 'city', tier: 1, timeMs: 4 * 60000,
+      cost: { food: 100, gold: 100 }, effect: { gachaDiscountPct: 10 }, requires: [] }
   ];
 
   function technologyDefById(id) { return TECHNOLOGY_DEFS.find((t) => t.id === id); }

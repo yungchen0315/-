@@ -115,7 +115,7 @@
     View.camY = clampCamY(cap.y * View.tilePx - View.canvas.height / 2);
   }
 
-  const TILE_COLORS = { empty: '#4a7a4f', capital: '#8a5a2b', resource: '#3a6bb0', monster: '#8a2b2b', landmark: '#6b5a8a' };
+  const TILE_COLORS = { empty: '#4a7a4f', capital: '#8a5a2b', resource: '#3a6bb0', monster: '#8a2b2b' };
 
   function draw() {
     const saveGame = window.GameSave;
@@ -148,8 +148,6 @@
           drawGlyph(ctx, D.RESOURCE_ICONS[tile.resourceType], sx, sy, 0.4);
         } else if (tile.type === 'monster') {
           drawGlyph(ctx, '⚔', sx, sy, 0.45);
-        } else if (tile.type === 'landmark') {
-          drawGlyph(ctx, '📍', sx, sy, 0.4);
         }
 
         if (View.selectedTile && View.selectedTile.x === tx && View.selectedTile.y === ty) {
@@ -217,9 +215,6 @@
     } else if (tile.type === 'monster') {
       const onCooldown = tile.cooldownUntil > U.now();
       panel.appendChild(U.el('div', 'subHint', onCooldown ? ('據點恢復中：' + U.formatCountdown(tile.cooldownUntil - U.now())) : ('守備力：約 ' + tile.guardPower)));
-    } else if (tile.type === 'landmark') {
-      panel.appendChild(U.el('div', 'subHint', '此處與武將「地圖探索」劇情相關，請於武將分頁的酒館探索取得對應人物。'));
-      return;
     }
 
     const garrisonArmies = Object.values(playerState.armies).filter((a) => a.status === 'garrison' && window.Game.Systems.Army.unitCount(a) > 0);
