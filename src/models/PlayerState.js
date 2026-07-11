@@ -22,6 +22,17 @@
    */
 
   /**
+   * @typedef {Object} ExplorationJob
+   * 酒館派遣探索的進行中工作，對應「還沒取得的 HeroData」——還沒有 HeroState
+   * 可以掛，所以獨立存在 PlayerState.explorations，完成時系統會建立對應的
+   * HeroState 並從這裡移除。
+   * @property {string} id
+   * @property {string} heroDataId 目標武將。
+   * @property {number} startAt
+   * @property {number} completeAt
+   */
+
+  /**
    * @typedef {Object} PlayerState
    * @property {string} factionId 對應 FactionDef.id。
    * @property {boolean} isHuman
@@ -36,6 +47,7 @@
    * @property {Object<string,MissionState>} missions 以 MissionDef.id 為 key
    *   （AI 勢力目前不會有進度，但形狀保持一致，方便日後如果要給 AI 也接上劇情）。
    * @property {BattleState[]} battleLog 依時間新到舊排列，供戰報畫面與成就系統查詢。
+   * @property {ExplorationJob[]} explorations 進行中的酒館探索工作。
    * @property {PendingEventState[]} pendingEvents
    * @property {string[]} unlockedAchievementIds
    * @property {number} nextEventAt 下一次隨機事件的排程時間戳，供事件系統使用。
@@ -74,6 +86,7 @@
       technologies,
       missions,
       battleLog: [],
+      explorations: [],
       pendingEvents: [],
       unlockedAchievementIds: [],
       nextEventAt: now + 8 * 60000

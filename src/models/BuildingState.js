@@ -22,10 +22,21 @@
    */
 
   /**
+   * @typedef {Object} TrainingJob
+   * @property {string} unitDefId
+   * @property {number} qty
+   * @property {number} startAt
+   * @property {number} completeAt
+   */
+
+  /**
    * @typedef {Object} BuildingState
    * @property {string} buildingType 對應 BuildingDef 的 id（例如 'granary'）。
    * @property {number} level 目前等級，0 表示尚未建造。
    * @property {BuildingUpgradeJob|null} upgrade 進行中的升級工作，沒有則為 null。
+   * @property {TrainingJob[]} trainQueue 訓練佇列。只有 BuildingDef.trains 有值的
+   *   建築（兵營／校場／工坊）才會用到，其餘建築此陣列永遠是空的——放在這裡而不是
+   *   另開一個全域字典，是因為訓練佇列本質上就屬於「這一棟建築」。
    */
 
   /**
@@ -34,7 +45,7 @@
    * @returns {BuildingState}
    */
   function createBuildingState(buildingType, level) {
-    return { buildingType, level: level || 0, upgrade: null };
+    return { buildingType, level: level || 0, upgrade: null, trainQueue: [] };
   }
 
   window.Game.Models.createBuildingState = createBuildingState;

@@ -1,20 +1,40 @@
 /* ============================================================================
- * saveSystem.js — 【骨架，尚未實作】
- *
- * 規劃職責：
- *   - saveToLocalStorage(saveGame) / loadFromLocalStorage()：包一層
- *     window.Game.Models.serializeSaveGame / deserializeSaveGame，
- *     實際的存放位置（localStorage）與存檔鍵名由這裡決定。
- *   - hasSave() / deleteSave()。
- *
- * 對應舊版 js/save.js。
+ * saveSystem.js — localStorage 存讀檔。對應舊版 js/save.js。
  * ==========================================================================*/
 
 (function () {
-  window.Game.Systems.Save = {
-    // saveToLocalStorage(saveGame) { ... }
-    // loadFromLocalStorage() { ... }
-    // hasSave() { ... }
-    // deleteSave() { ... }
-  };
+  const SAVE_KEY = 'huangzhe_tianxia_save_v2_src';
+
+  function hasSave() {
+    try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; }
+  }
+
+  /** @param {SaveGame} saveGame */
+  function saveToLocalStorage(saveGame) {
+    try {
+      localStorage.setItem(SAVE_KEY, window.Game.Models.serializeSaveGame(saveGame));
+      return true;
+    } catch (e) {
+      console.error('saveToLocalStorage failed', e);
+      return false;
+    }
+  }
+
+  /** @returns {SaveGame|null} */
+  function loadFromLocalStorage() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return null;
+      return window.Game.Models.deserializeSaveGame(raw);
+    } catch (e) {
+      console.error('loadFromLocalStorage failed', e);
+      return null;
+    }
+  }
+
+  function deleteSave() {
+    try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ }
+  }
+
+  window.Game.Systems.Save = { SAVE_KEY, hasSave, saveToLocalStorage, loadFromLocalStorage, deleteSave };
 })();
