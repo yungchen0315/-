@@ -48,15 +48,16 @@
 
   /** @type {HeroData[]} */
   const HERO_DEFS = [
+    hero('liubei', '劉備', 'shu', 5, 55, 90, 82, '仁德', '全軍傷亡大幅降低，長期作戰更具韌性', { type: 'story', missionId: 'shu_m1' }),
     hero('guanyu', '關羽', 'shu', 5, 97, 93, 75, '武聖', '出戰步兵/槍兵攻擊力大幅提升', { type: 'story', missionId: 'shu_m3' }),
     hero('zhangfei', '張飛', 'shu', 5, 96, 78, 55, '咆哮', '戰鬥開始時使敵軍全體防禦力下降', { type: 'story', missionId: 'shu_m2' }),
-    hero('zhaoyun', '趙雲', 'shu', 5, 94, 90, 78, '龍膽', '所率部隊承受的傷害降低', { type: 'story', missionId: 'shu_m1' }),
+    hero('zhaoyun', '趙雲', 'shu', 5, 94, 90, 78, '龍膽', '所率部隊承受的傷害降低', { type: 'recruit' }),
     hero('machao', '馬超', 'shu', 4, 95, 82, 60, '西涼鐵騎', '騎兵攻擊力提升', { type: 'recruit' }),
     hero('huangzhong', '黃忠', 'shu', 4, 92, 79, 65, '百步穿楊', '弓騎兵/弩兵造成的傷害提升', { type: 'recruit' }),
     hero('zhugeliang', '諸葛亮', 'shu', 5, 38, 92, 100, '奇謀', '戰鬥中我軍傷亡降低且獲得額外資源', { type: 'story', missionId: 'shu_m4' }),
-    hero('jiangwei', '姜維', 'shu', 3, 85, 80, 82, '繼志', '統率部隊在攻城戰中傷害提升', { type: 'recruit' }),
+    hero('jiangwei', '姜維', 'shu', 3, 85, 80, 82, '繼志', '統率部隊在攻城戰中傷害提升', { type: 'story', missionId: 'shu_m11' }),
     hero('weiyan', '魏延', 'shu', 3, 88, 79, 62, '奇襲', '主動進攻時首輪傷害提升', { type: 'story', missionId: 'shu_m5' }),
-    hero('pangtong', '龐統', 'shu', 4, 45, 85, 96, '連環', '戰鬥中削弱敵軍全體攻擊力', { type: 'story', missionId: 'shu_m4' }),
+    hero('pangtong', '龐統', 'shu', 4, 45, 85, 96, '連環', '戰鬥中削弱敵軍全體攻擊力', { type: 'recruit' }),
     hero('liyan', '李嚴', 'shu', 2, 70, 68, 70, '治政', '主城資源產出小幅提升', { type: 'recruit' }),
 
     hero('caocao', '曹操', 'wei', 5, 80, 96, 92, '梟雄', '全軍士氣與攻擊力提升', { type: 'story', missionId: 'wei_m1' }),

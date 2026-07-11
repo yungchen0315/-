@@ -8,9 +8,9 @@
   const D = window.Game.Data;
   const M = window.Game.Models;
 
-  /** 各勢力的起始武將：蜀漢無合適的「開國者」武將可用（劉備本身未作為可操作武將），
-   * 改以其最著名的大將趙雲代替；魏、吳則直接以各自的開國之主曹操、孫權起始。 */
-  const STARTER_HERO_BY_FACTION = { shu: 'zhaoyun', wei: 'caocao', wu: 'sunquan' };
+  /** 各勢力的起始武將，皆為該勢力的開國之主：蜀＝劉備、魏＝曹操、吳＝孫權。
+   * 趙雲改為酒館招募（抽獎）取得，不再是開局即送的固定武將。 */
+  const STARTER_HERO_BY_FACTION = { shu: 'liubei', wei: 'caocao', wu: 'sunquan' };
 
   /**
    * @param {string} [humanFactionId] 玩家選擇操控的勢力 id，預設 'shu'（相容舊行為）。
