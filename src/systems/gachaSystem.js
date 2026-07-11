@@ -32,10 +32,16 @@
     return days;
   }
 
-  /** @returns {Array<{kind:'hero'|'item', id:string, weight:number}>} */
-  function poolEntries(pool) {
+  /**
+   * @param {GachaPoolDef} pool
+   * @param {string} factionId 只招募該勢力自己的武將——每位武將僅歸屬單一勢力
+   *   （HeroData.factionId），裝備則不分勢力。
+   * @returns {Array<{kind:'hero'|'item', id:string, weight:number}>}
+   */
+  function poolEntries(pool, factionId) {
     const entries = [];
     D.HERO_DEFS.forEach((h) => {
+      if (h.factionId !== factionId) return;
       if (h.rarity >= pool.heroRarityRange[0] && h.rarity <= pool.heroRarityRange[1]) {
         entries.push({ kind: 'hero', id: h.id, weight: D.GACHA_RARITY_WEIGHT[h.rarity] || 1 });
       }
@@ -48,8 +54,8 @@
     return entries;
   }
 
-  function drawOne(pool) {
-    return U.weightedChoice(poolEntries(pool), (e) => e.weight);
+  function drawOne(pool, factionId) {
+    return U.weightedChoice(poolEntries(pool, factionId), (e) => e.weight);
   }
 
   function tavernLevel(playerState) {
@@ -77,7 +83,7 @@
     const perDrawCost = cost / n;
     const results = [];
     for (let i = 0; i < n; i++) {
-      const picked = drawOne(pool);
+      const picked = drawOne(pool, playerState.factionId);
       if (picked.kind === 'hero') {
         if (playerState.heroes[picked.id]) {
           const refund = Math.round(perDrawCost * 0.3);
