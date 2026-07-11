@@ -52,6 +52,9 @@
           playerState.resources[r] = U.clamp(playerState.resources[r] + achievement.reward.resources[r], 0, eff.storageCap[r]);
         });
       }
+      if (achievement.reward && achievement.reward.ingot) {
+        playerState.resources.ingot = (playerState.resources.ingot || 0) + achievement.reward.ingot;
+      }
       newlyUnlocked.push(achievement);
     });
     return newlyUnlocked;

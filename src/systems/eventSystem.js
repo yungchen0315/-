@@ -28,6 +28,12 @@
       delta[r] = amount;
       playerState.resources[r] = U.clamp(playerState.resources[r] + amount, 0, eff.storageCap[r]);
     });
+    if (eventType.ingotRange) {
+      const [min, max] = eventType.ingotRange;
+      const amount = U.randomInt(min, max);
+      delta.ingot = amount;
+      playerState.resources.ingot = (playerState.resources.ingot || 0) + amount;
+    }
     return { eventType, delta };
   }
 

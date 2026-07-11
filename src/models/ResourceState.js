@@ -14,6 +14,9 @@
    * @property {number} wood 木材存量。
    * @property {number} stone 石料存量。
    * @property {number} gold 銀兩存量。
+   * @property {number} ingot 元寶存量：抽獎專用的獎勵貨幣，不受倉庫上限限制，
+   *   也不計入資源產出／攻城掠奪／野怪戰利品（刻意獨立於 RESOURCE_TYPES 之外，
+   *   只透過戰役／成就／事件獎勵與每日簽到取得）。
    */
 
   /**
@@ -22,7 +25,7 @@
    * @returns {ResourceState}
    */
   function createResourceState(overrides) {
-    return Object.assign({ food: 800, wood: 800, stone: 500, gold: 300 }, overrides || {});
+    return Object.assign({ food: 800, wood: 800, stone: 500, gold: 300, ingot: 0 }, overrides || {});
   }
 
   window.Game.Models.createResourceState = createResourceState;

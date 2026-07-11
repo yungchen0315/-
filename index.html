@@ -21,6 +21,7 @@
       <span id="topRes_wood" class="topResItem"></span>
       <span id="topRes_stone" class="topResItem"></span>
       <span id="topRes_gold" class="topResItem"></span>
+      <span id="topRes_ingot" class="topResItem"></span>
     </div>
     <div id="topPower"></div>
   </header>
@@ -36,6 +37,7 @@
     <section id="screenHero" class="screen"></section>
     <section id="screenArmy" class="screen"></section>
     <section id="screenMission" class="screen"></section>
+    <section id="screenGacha" class="screen"></section>
     <section id="screenReport" class="screen"></section>
   </main>
 
@@ -45,6 +47,7 @@
     <button class="navBtn" data-screen="hero">🎖️<span>武將</span></button>
     <button class="navBtn" data-screen="army">⚔️<span>軍隊</span></button>
     <button class="navBtn" data-screen="mission">📜<span>戰役</span></button>
+    <button class="navBtn" data-screen="gacha">🧧<span>抽獎</span></button>
     <button class="navBtn" data-screen="report">📰<span>戰報</span></button>
   </nav>
 
@@ -80,6 +83,7 @@
 <script src="src/data/eventTypeDefs.js"></script>
 <script src="src/data/achievementDefs.js"></script>
 <script src="src/data/mapConfigDefs.js"></script>
+<script src="src/data/gachaPoolDefs.js"></script>
 
 <script src="src/models/ResourceState.js"></script>
 <script src="src/models/BuildingState.js"></script>
@@ -106,6 +110,7 @@
 <script src="src/systems/aiSystem.js"></script>
 <script src="src/systems/newGameSystem.js"></script>
 <script src="src/systems/saveSystem.js"></script>
+<script src="src/systems/gachaSystem.js"></script>
 <script src="src/systems/gameLoopSystem.js"></script>
 
 <script src="src/ui/dialog.js"></script>
@@ -117,6 +122,7 @@
 <script src="src/ui/heroScreen.js"></script>
 <script src="src/ui/armyScreen.js"></script>
 <script src="src/ui/missionScreen.js"></script>
+<script src="src/ui/gachaScreen.js"></script>
 <script src="src/ui/reportScreen.js"></script>
 <script src="src/ui/bootstrap.js"></script>
 </body>

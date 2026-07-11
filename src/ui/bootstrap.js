@@ -7,7 +7,7 @@
   const U = window.Game.Utils;
   const Dlg = window.Game.UI.Dialog;
 
-  const SCREENS = ['city', 'map', 'hero', 'army', 'mission', 'report'];
+  const SCREENS = ['city', 'map', 'hero', 'army', 'mission', 'gacha', 'report'];
 
   let tickHandle = null;
   let saveHandle = null;
@@ -79,6 +79,7 @@
     else if (name === 'hero') window.Game.UI.HeroScreen.render(document.getElementById('screenHero'), window.GameSave, player);
     else if (name === 'army') window.Game.UI.ArmyScreen.render(document.getElementById('screenArmy'), window.GameSave, player);
     else if (name === 'mission') window.Game.UI.MissionScreen.render(document.getElementById('screenMission'), window.GameSave, player);
+    else if (name === 'gacha') window.Game.UI.GachaScreen.render(document.getElementById('screenGacha'), window.GameSave, player);
     else if (name === 'report') window.Game.UI.ReportScreen.render(document.getElementById('screenReport'), player);
     else if (name === 'map') window.Game.UI.MapScreen.draw();
   }
@@ -101,7 +102,7 @@
     window.Game.Systems.GameLoop.advanceTime(window.GameSave, U.now());
     window.Game.UI.TopBar.refresh(humanPlayer());
     const screen = window.GameSave.activeScreenId;
-    if (screen === 'city' || screen === 'army' || screen === 'hero' || screen === 'map') {
+    if (screen === 'city' || screen === 'army' || screen === 'hero' || screen === 'map' || screen === 'gacha') {
       renderCurrentScreen();
       if (screen === 'map') window.Game.UI.MapScreen.renderInfoPanel(window.GameSave, humanPlayer());
     }
