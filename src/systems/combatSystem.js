@@ -14,6 +14,7 @@
 
   // 技能對戰鬥的實際數值影響，取代純敘述文字。key 為 HeroData.id。
   const SKILL_HANDLERS = {
+    liubei: (b) => { b.lossReductionPct += 15; },
     guanyu: (b) => { b.unitAtkPct.infantry = (b.unitAtkPct.infantry || 0) + 15; b.unitAtkPct.spearman = (b.unitAtkPct.spearman || 0) + 15; },
     zhangfei: (b) => { b.enemyDefPct -= 12; },
     zhaoyun: (b) => { b.lossReductionPct += 10; },
