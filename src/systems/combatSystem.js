@@ -12,49 +12,27 @@
     return { atkPct: 0, defPct: 0, hpPct: 0, unitAtkPct: {}, lossReductionPct: 0, lootBonusPct: 0, enemyAtkPct: 0, enemyDefPct: 0, firstStrikePct: 0 };
   }
 
-  // 技能對戰鬥的實際數值影響，取代純敘述文字。key 為 HeroData.id。
-  const SKILL_HANDLERS = {
-    liubei: (b) => { b.lossReductionPct += 15; },
-    guanyu: (b) => { b.unitAtkPct.infantry = (b.unitAtkPct.infantry || 0) + 15; b.unitAtkPct.spearman = (b.unitAtkPct.spearman || 0) + 15; },
-    zhangfei: (b) => { b.enemyDefPct -= 12; },
-    zhaoyun: (b) => { b.lossReductionPct += 10; },
-    machao: (b) => { b.unitAtkPct.cavalry = (b.unitAtkPct.cavalry || 0) + 18; },
-    huangzhong: (b) => { b.unitAtkPct.crossbowman = (b.unitAtkPct.crossbowman || 0) + 16; b.unitAtkPct.horsearcher = (b.unitAtkPct.horsearcher || 0) + 16; },
-    zhugeliang: (b) => { b.lossReductionPct += 12; b.lootBonusPct += 15; },
-    jiangwei: (b) => { b.atkPct += 8; },
-    weiyan: (b) => { b.firstStrikePct += 15; },
-    pangtong: (b) => { b.enemyAtkPct -= 12; },
-    liyan: (b) => { b.lootBonusPct += 10; },
-
-    caocao: (b) => { b.atkPct += 10; },
-    simayi: (b, isDefender) => { if (isDefender) b.enemyAtkPct -= 15; },
-    xiahoudun: (b) => { b.hpPct += 12; },
-    zhangliao: (b, isDefender, isAttacker) => { if (isAttacker) b.firstStrikePct += 18; },
-    xuhuang: (b) => { b.atkPct += 8; },
-    dianwei: (b) => { b.defPct += 15; },
-    xuchu: (b) => { b.hpPct += 15; },
-    guojia: (b, isDefender, isAttacker) => { if (isAttacker) b.firstStrikePct += 10; },
-    zhangjunyi: (b) => { b.defPct += 8; },
-    caoren: (b, isDefender) => { if (isDefender) b.defPct += 15; },
-
-    sunquan: (b) => { b.atkPct += 6; b.defPct += 6; },
-    zhouyu: (b, isDefender, isAttacker) => { if (isAttacker) b.enemyDefPct -= 10; },
-    luxun: (b, isDefender) => { if (isDefender) b.enemyAtkPct -= 12; },
-    ganning: (b, isDefender, isAttacker) => { if (isAttacker) b.atkPct += 14; },
-    taishici: (b) => { b.atkPct += 10; },
-    lumeng: (b) => { b.lossReductionPct += 10; },
-    huanggai: (b, isDefender) => { if (isDefender) b.enemyAtkPct -= 8; },
-    lusu: (b) => { b.lossReductionPct += 6; },
-    sunshangxiang: (b) => { b.unitAtkPct.horsearcher = (b.unitAtkPct.horsearcher || 0) + 16; },
-    zhoutai: (b) => { b.hpPct += 10; }
-  };
+  /**
+   * 套用一位武將的 skill.effects（src/data/heroDefs.js）到戰鬥加成上。effects 是
+   * combatBonusFor 與 UI 顯示（heroScreen.js 的數值說明）共用的同一份資料，
+   * 不會有「說明寫的效果」跟「實際套用的效果」對不起來的情況。
+   */
+  function applySkillEffects(bonus, heroDef, isDefender, isAttacker) {
+    if (!heroDef.skill || !heroDef.skill.effects) return;
+    heroDef.skill.effects.forEach((e) => {
+      if (e.when === 'attacking' && !isAttacker) return;
+      if (e.when === 'defending' && !isDefender) return;
+      if (e.stat === 'unitAtkPct') { bonus.unitAtkPct[e.unit] = (bonus.unitAtkPct[e.unit] || 0) + e.value; return; }
+      bonus[e.stat] = (bonus[e.stat] || 0) + e.value;
+    });
+  }
 
   /** 技能＋已裝備物品的綜合戰鬥加成。playerState 為 null 時（例如劇情關卡的敵軍）只回傳空加成。 */
   function combatBonusFor(playerState, heroStateId, isAttacker) {
     const bonus = emptyCombatBonus();
     if (!heroStateId || !playerState) return bonus;
-    const handler = SKILL_HANDLERS[heroStateId];
-    if (handler) handler(bonus, !isAttacker, isAttacker);
+    const heroDef = D.heroDefById(heroStateId);
+    if (heroDef) applySkillEffects(bonus, heroDef, !isAttacker, isAttacker);
     const heroState = playerState.heroes[heroStateId];
     if (heroState && heroState.equipment) {
       D.ITEM_SLOTS.forEach((slot) => {

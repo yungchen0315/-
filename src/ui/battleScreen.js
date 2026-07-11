@@ -11,6 +11,7 @@
   const HP = window.Game.UI.HeroPortrait;
 
   const SPEED_MS = { 1: 900, 2: 420 };
+  const TOKENS_PER_SIDE = 10;
 
   function deriveHeroDisplay(heroStateId, units, playerState, fallbackName, fallbackFactionId) {
     if (heroStateId) {
@@ -62,6 +63,46 @@
     row.appendChild(U.el('span', 'battlePressurePct' + (pct >= 100 ? ' battlePressureUp' : ' battlePressureDown'), pct + '%'));
     row.appendChild(U.el('span', 'battlePressureVal', defVal));
     return row;
+  }
+
+  /**
+   * 依兵種組成按比例抽出最多 TOKENS_PER_SIDE 個圖示，用於沙場畫面上實際排開的
+   * 一格格小兵，純視覺呈現（不影響戰鬥計算，計算仍以 combatSystem 的數值為準）。
+   */
+  function buildTokenIcons(units) {
+    const rows = unitRow(units);
+    if (rows.length === 0) return ['⚔'];
+    const total = rows.reduce((s, e) => s + e.qty, 0) || 1;
+    const icons = [];
+    rows.forEach((e) => {
+      const count = Math.max(1, Math.round((e.qty / total) * TOKENS_PER_SIDE));
+      for (let i = 0; i < count && icons.length < TOKENS_PER_SIDE; i++) icons.push(e.def.icon);
+    });
+    while (icons.length < Math.min(TOKENS_PER_SIDE, total)) icons.push(rows[0].def.icon);
+    return icons.slice(0, TOKENS_PER_SIDE);
+  }
+
+  function buildTokenCluster(units, extraClass) {
+    const wrap = U.el('div', 'battleArmyCluster' + (extraClass ? ' ' + extraClass : ''));
+    const tokenEls = buildTokenIcons(units).map((icon) => {
+      const el = U.el('span', 'battleToken', icon);
+      wrap.appendChild(el);
+      return el;
+    });
+    return { wrap, tokenEls };
+  }
+
+  /** 依目前血量百分比，讓沙場上的小兵圖示逐漸消失，呈現「打到剩幾個人」的臨場感。 */
+  function updateTokenLoss(tokenEls, hpPct) {
+    const remaining = U.clamp(Math.round(tokenEls.length * hpPct / 100), 0, tokenEls.length);
+    tokenEls.forEach((el, i) => { el.classList.toggle('battleTokenGone', i >= remaining); });
+  }
+
+  function replay(el, className) {
+    el.classList.remove(className);
+    // eslint-disable-next-line no-unused-expressions
+    void el.offsetWidth;
+    el.classList.add(className);
   }
 
   /**
@@ -124,6 +165,17 @@
     pressurePanel.appendChild(pressureRow('統帥', attacker.cmd, defender.cmd));
     box.appendChild(pressurePanel);
 
+    // 沙場畫面：兩軍以小兵圖示實際排開，每回合攻方會朝中線衝刺、中線閃現交鋒
+    // 特效，被攻擊的一方畫面震動並依傷害比例減少存活的小兵圖示。
+    const stage = U.el('div', 'battleFieldStage');
+    const atkCluster = buildTokenCluster(opts.attackerUnitsBefore, 'battleArmyClusterLeft');
+    const impactSpark = U.el('div', 'battleImpactSpark', '💥');
+    const defCluster = buildTokenCluster(opts.defenderUnitsBefore, 'battleArmyClusterRight');
+    stage.appendChild(atkCluster.wrap);
+    stage.appendChild(impactSpark);
+    stage.appendChild(defCluster.wrap);
+    box.appendChild(stage);
+
     const field = U.el('div', 'battleField');
     const atkTroops = U.el('div', 'battleTroopRow');
     unitRow(opts.attackerUnitsBefore).forEach((e) => {
@@ -163,10 +215,16 @@
 
     function showFlash(text) {
       flash.textContent = text;
-      flash.classList.remove('battleFlashPlay');
-      // eslint-disable-next-line no-unused-expressions
-      void flash.offsetWidth;
-      flash.classList.add('battleFlashPlay');
+      replay(flash, 'battleFlashPlay');
+    }
+
+    /** 播放一次「攻方衝向中線→中線交鋒閃光→守方畫面震動」的沙場交戰動畫。 */
+    function playClash(side) {
+      const chargingCluster = side === 'attacker' ? atkCluster.wrap : defCluster.wrap;
+      const hitCluster = side === 'attacker' ? defCluster.wrap : atkCluster.wrap;
+      replay(chargingCluster, 'battleCharging');
+      replay(impactSpark, 'battleImpactPlay');
+      replay(hitCluster, 'battleShaking');
     }
 
     function renderResult() {
@@ -190,10 +248,13 @@
       } else if (ev.type === 'attack') {
         turnLabel.textContent = '回合 ' + ev.turn;
         showFlash((ev.side === 'attacker' ? '我軍' : defender.name) + ' 造成 ' + ev.damage + ' 傷害');
+        playClash(ev.side);
         atkHpBar.style.width = Math.max(0, ev.atkHpPct) + '%';
         defHpBar.style.width = Math.max(0, ev.defHpPct) + '%';
         atkTroops.style.opacity = Math.max(0.25, ev.atkHpPct / 100);
         defTroops.style.opacity = Math.max(0.25, ev.defHpPct / 100);
+        updateTokenLoss(atkCluster.tokenEls, ev.atkHpPct);
+        updateTokenLoss(defCluster.tokenEls, ev.defHpPct);
         defeatedCounter.textContent = '累計擊敗部隊：' + Math.round(defenderTotalQty * (1 - ev.defHpPct / 100)) + ' / ' + defenderTotalQty;
       } else if (ev.type === 'victory') {
         showFlash(ev.side === 'attacker' ? '我軍獲勝！' : defender.name + ' 獲勝！');
@@ -219,6 +280,8 @@
           atkHpBar.style.width = Math.max(0, ev.atkHpPct) + '%';
           defHpBar.style.width = Math.max(0, ev.defHpPct) + '%';
           turnLabel.textContent = '回合 ' + ev.turn;
+          updateTokenLoss(atkCluster.tokenEls, ev.atkHpPct);
+          updateTokenLoss(defCluster.tokenEls, ev.defHpPct);
           defeatedCounter.textContent = '累計擊敗部隊：' + Math.round(defenderTotalQty * (1 - ev.defHpPct / 100)) + ' / ' + defenderTotalQty;
         }
       }
