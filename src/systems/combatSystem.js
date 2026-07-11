@@ -105,9 +105,18 @@
     return { atk, def, hp, bonus };
   }
 
+  const TURN_DMG_SCALE = 6;
+  const TURN_DEF_SOFTEN = 45;
+  const MAX_TURNS = 10;
+
   /**
    * 攻擊方 vs 守軍（守軍可為駐守部隊＋城防加成，也可為野外據點的固定守備力）。
-   * @returns {{winner:'attacker'|'defender', attackerLossRate:number, defenderLossRate:number, attackerLootBonusPct:number}}
+   * 真正逐回合計算：雙方每回合互相扣減 HP 池，直到一方歸零或達到回合上限；
+   * 技能／裝備加成在戰前就摺算進 atk/def/hp（sideCombatStats），
+   * 但「誰先撐不住」是由逐回合的傷害交換決定，不是單次的戰力比公式。
+   * timeline 記錄每一回合的攻防事件，供 battleScreen 逐回合播放動畫用。
+   * @returns {{winner:'attacker'|'defender', attackerLossRate:number, defenderLossRate:number,
+   *   attackerLootBonusPct:number, turns:number, timeline:Array<Object>}}
    */
   function resolveBattle(opts) {
     const { attackerUnits, attackerHeroStateId, attackerEff, attackerPlayerState,
@@ -127,27 +136,62 @@
     }
     defDef *= 1 + (wallBonusPct || 0) / 100;
     defDef *= 1 + (atkStats.bonus.enemyDefPct || 0) / 100;
-    const attackerAtkAfterEnemySkill = atkStats.atk * (1 + (defBonus.enemyAtkPct || 0) / 100);
+    const attackerAtkFinal = atkStats.atk * (1 + (defBonus.enemyAtkPct || 0) / 100);
+    const attackerLossReductionPct = U.clamp(atkStats.bonus.lossReductionPct, 0, 60);
+    const defenderLossReductionPct = U.clamp(defBonus.lossReductionPct, 0, 60);
 
-    const attackerPower = attackerAtkAfterEnemySkill * (1 + atkStats.hp / 2000) + atkStats.def * 0.3;
-    const defenderPower = defAtk * 0.4 + defDef * (1 + defHp / 2000);
+    const atkHpMax = Math.max(1, atkStats.hp);
+    const defHpMax = Math.max(1, defHp);
+    let atkHp = atkHpMax;
+    let defHpPool = defHpMax;
 
-    const total = attackerPower + defenderPower || 1;
-    const ratio = attackerPower / total;
-    const winner = attackerPower >= defenderPower ? 'attacker' : 'defender';
+    const timeline = [];
+    if (attackerHeroStateId) {
+      const hd = D.heroDefById(attackerHeroStateId);
+      if (hd) timeline.push({ turn: 0, side: 'attacker', type: 'skill', skillName: hd.skill.name });
+    }
+    if (defenderHeroStateId) {
+      const hd = D.heroDefById(defenderHeroStateId);
+      if (hd) timeline.push({ turn: 0, side: 'defender', type: 'skill', skillName: hd.skill.name });
+    }
 
-    let attackerLossRate = U.clamp(1 - ratio, 0.05, 0.85);
-    let defenderLossRate = U.clamp(ratio, 0.05, 0.85);
-    attackerLossRate *= 1 - U.clamp(atkStats.bonus.lossReductionPct, 0, 60) / 100;
-    defenderLossRate *= 1 - U.clamp(defBonus.lossReductionPct, 0, 60) / 100;
+    let turn = 0;
+    let winner = null;
+    while (turn < MAX_TURNS) {
+      turn++;
+      const dmgToDefenderRaw = (attackerAtkFinal * TURN_DMG_SCALE) / (1 + defDef / TURN_DEF_SOFTEN);
+      const dmgToDefender = dmgToDefenderRaw * (1 - defenderLossReductionPct / 100);
+      defHpPool = Math.max(0, defHpPool - dmgToDefender);
+      timeline.push({
+        turn, side: 'attacker', type: 'attack', damage: Math.round(dmgToDefender),
+        atkHpPct: Math.round(atkHp / atkHpMax * 100), defHpPct: Math.round(defHpPool / defHpMax * 100)
+      });
+      if (defHpPool <= 0) { winner = 'attacker'; break; }
+
+      const dmgToAttackerRaw = (defAtk * TURN_DMG_SCALE) / (1 + atkStats.def / TURN_DEF_SOFTEN);
+      const dmgToAttacker = dmgToAttackerRaw * (1 - attackerLossReductionPct / 100);
+      atkHp = Math.max(0, atkHp - dmgToAttacker);
+      timeline.push({
+        turn, side: 'defender', type: 'attack', damage: Math.round(dmgToAttacker),
+        atkHpPct: Math.round(atkHp / atkHpMax * 100), defHpPct: Math.round(defHpPool / defHpMax * 100)
+      });
+      if (atkHp <= 0) { winner = 'defender'; break; }
+    }
+    if (!winner) winner = (atkHp / atkHpMax) >= (defHpPool / defHpMax) ? 'attacker' : 'defender';
+    timeline.push({ turn: turn + 1, side: winner, type: 'victory' });
+
+    const attackerLossRate = U.clamp(1 - atkHp / atkHpMax, 0.02, 0.9);
+    const defenderLossRate = U.clamp(1 - defHpPool / defHpMax, 0.02, 0.9);
 
     return {
       winner,
-      attackerPower: Math.round(attackerPower),
-      defenderPower: Math.round(defenderPower),
+      attackerPower: Math.round(attackerAtkFinal),
+      defenderPower: Math.round(defAtk),
       attackerLossRate: U.clamp(attackerLossRate, 0.02, 0.9),
       defenderLossRate: U.clamp(defenderLossRate, 0.02, 0.9),
-      attackerLootBonusPct: atkStats.bonus.lootBonusPct || 0
+      attackerLootBonusPct: atkStats.bonus.lootBonusPct || 0,
+      turns: turn,
+      timeline
     };
   }
 
