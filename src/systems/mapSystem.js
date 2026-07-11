@@ -1,5 +1,5 @@
 /* ============================================================================
- * mapSystem.js — 世界地圖生成與產地佔領。
+ * mapSystem.js — 世界地圖生成與產地／城池佔領。
  * 對應舊版 js/state.js 的 generateWorld() 與 js/army.js 的產地佔領分支。
  * ==========================================================================*/
 
@@ -8,40 +8,123 @@
   const U = window.Game.Utils;
   const M = window.Game.Models;
 
+  /** 各勢力歷史首都名稱（取代原本泛用的「XX主城」）。 */
+  const CAPITAL_NAMES = { shu: '成都', wei: '洛陽', wu: '建業' };
+
   /**
-   * 在既有（空白）MapState 上放置主城、產地、野怪營地、探索地標。
+   * 每個勢力自己的「本土」城池（不含首都），開局皆為叛軍佔據（ownerFactionId 為
+   * null），需玩家/該勢力 AI 自行出兵收復；收復後即成為該勢力的第二座城池，
+   * 可獨立升級建築、貢獻資源產出。座標為相對於該勢力首都的位移量，實際座標在
+   * generateMap() 依地圖尺寸換算並夾在邊界內。
+   */
+  const HOME_CITY_OFFSETS = {
+    shu: [
+      { dx: 5, dy: -1, name: '綿竹' },
+      { dx: -1, dy: 5, name: '江州' },
+      { dx: 6, dy: 6, name: '巴郡' },
+      { dx: 2, dy: 9, name: '永安' },
+      { dx: 9, dy: 2, name: '漢中' }
+    ],
+    wei: [
+      { dx: -5, dy: -1, name: '鄴城' },
+      { dx: 1, dy: 5, name: '宛城' },
+      { dx: -6, dy: 6, name: '長安' },
+      { dx: -2, dy: 9, name: '合肥' },
+      { dx: -9, dy: 2, name: '壽春' }
+    ],
+    wu: [
+      { dx: 0, dy: -5, name: '柴桑' },
+      { dx: -7, dy: -2, name: '廬江' },
+      { dx: 7, dy: -2, name: '會稽' },
+      { dx: -4, dy: 2, name: '豫章' },
+      { dx: 4, dy: 2, name: '交趾' }
+    ]
+  };
+
+  function capitalSpotsFor(w, h) {
+    const margin = Math.max(3, Math.round(w * 0.14));
+    return {
+      shu: { x: margin, y: margin },
+      wei: { x: w - 1 - margin, y: margin },
+      wu: { x: Math.floor(w / 2), y: h - 1 - margin }
+    };
+  }
+
+  /**
+   * 在既有（空白）MapState 上放置各勢力首都、各勢力本土城池（叛軍佔據）、
+   * 產地與野怪營地。產地／野怪的擺放以「離哪個首都最近」把整張地圖分成三個
+   * 大致相等的區域，各區域各自保證固定數量，避免像原本純隨機那樣可能讓
+   * 某個勢力附近完全沒有資源點。
    * @param {MapState} mapState
    * @param {FactionDef[]} factionDefs
-   * @returns {Object<string,{x:number,y:number}>} 各勢力主城落點座標，供
+   * @returns {Object<string,{x:number,y:number}>} 各勢力首都落點座標，供
    *   newGameSystem 用來建立對應的 CityState。
    */
   function generateMap(mapState, factionDefs) {
     const w = mapState.width, h = mapState.height;
-    const capitalSpots = [
-      { x: 2, y: 2 },
-      { x: w - 3, y: 2 },
-      { x: Math.floor(w / 2), y: h - 3 }
-    ];
+    const capitalSpots = capitalSpotsFor(w, h);
     const capitalByFaction = {};
-    factionDefs.forEach((f, i) => {
-      const spot = capitalSpots[i];
+    const reserved = new Set();
+
+    factionDefs.forEach((f) => {
+      const spot = capitalSpots[f.id];
       const t = mapState.tiles[M.tileKey(spot.x, spot.y)];
       t.type = 'capital';
       t.ownerFactionId = f.id;
-      t.name = f.name + '主城';
+      t.name = CAPITAL_NAMES[f.id] || (f.name + '首都');
       capitalByFaction[f.id] = spot;
+      reserved.add(M.tileKey(spot.x, spot.y));
     });
 
-    const resourcePool = ['wood', 'stone', 'gold', 'food'];
-    let resourceCount = 0, monsterCount = 0;
+    factionDefs.forEach((f) => {
+      const cap = capitalSpots[f.id];
+      (HOME_CITY_OFFSETS[f.id] || []).forEach((spot) => {
+        const x = U.clamp(cap.x + spot.dx, 1, w - 2);
+        const y = U.clamp(cap.y + spot.dy, 1, h - 2);
+        const key = M.tileKey(x, y);
+        if (reserved.has(key)) return; // 極端小地圖時避免座標碰撞，寧可少一座城池也不覆蓋既有的格子。
+        reserved.add(key);
+        const t = mapState.tiles[key];
+        t.type = 'city';
+        t.name = spot.name;
+        t.homeFactionId = f.id;
+        t.ownerFactionId = null;
+        t.cityId = 'city_' + key;
+        const distFromHome = U.tileDistance(cap, { x, y });
+        t.guardPower = U.randomInt(50, 90) + distFromHome * 6;
+      });
+    });
+
+    // 依「離哪個首都最近」把全地圖（含已放置城池的格子）都標上所屬區域
+    // （regionFactionId），一方面用來把空地分成三個區域各自獨立保證固定數量的
+    // 產地／野怪，避免像原本純隨機那樣可能讓某個勢力附近完全沒有資源點；
+    // 另一方面地圖畫面也會依此替每個區域上一層淡淡的勢力色調，方便玩家一眼
+    // 看出地圖上哪一塊大致是哪個勢力的地盤。
+    const regionTiles = {};
+    factionDefs.forEach((f) => { regionTiles[f.id] = []; });
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
-        const t = mapState.tiles[M.tileKey(x, y)];
-        if (t.type !== 'empty') continue;
-        const nearCapital = capitalSpots.some((c) => Math.abs(c.x - x) <= 1 && Math.abs(c.y - y) <= 1);
-        if (nearCapital) continue;
-        const roll = Math.random();
-        if (roll < 0.12 && resourceCount < 18) {
+        const key = M.tileKey(x, y);
+        let closest = factionDefs[0].id, closestDist = Infinity;
+        factionDefs.forEach((f) => {
+          const d = U.tileDistance(capitalByFaction[f.id], { x, y });
+          if (d < closestDist) { closestDist = d; closest = f.id; }
+        });
+        mapState.tiles[key].regionFactionId = closest;
+        if (reserved.has(key)) continue;
+        regionTiles[closest].push(mapState.tiles[key]);
+      }
+    }
+
+    const resourcePool = ['wood', 'stone', 'gold', 'food'];
+    const RESOURCE_PER_REGION = 10;
+    const MONSTER_PER_REGION = 8;
+    factionDefs.forEach((f) => {
+      const tiles = shuffle(regionTiles[f.id].slice());
+      let idx = 0, resourceCount = 0, monsterCount = 0;
+      while (idx < tiles.length && (resourceCount < RESOURCE_PER_REGION || monsterCount < MONSTER_PER_REGION)) {
+        const t = tiles[idx++];
+        if (resourceCount < RESOURCE_PER_REGION && (monsterCount >= MONSTER_PER_REGION || Math.random() < 0.6)) {
           t.type = 'resource';
           t.resourceType = resourcePool[resourceCount % resourcePool.length];
           t.guardPower = U.randomInt(40, 160);
@@ -49,7 +132,7 @@
           t.name = D.RESOURCE_NAMES[t.resourceType] + '產地';
           t.ownerFactionId = null;
           resourceCount++;
-        } else if (roll < 0.18 && monsterCount < 14) {
+        } else if (monsterCount < MONSTER_PER_REGION) {
           t.type = 'monster';
           t.guardPower = U.randomInt(80, 300);
           t.name = '野外賊寇';
@@ -57,8 +140,17 @@
           monsterCount++;
         }
       }
-    }
+    });
+
     return capitalByFaction;
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    }
+    return arr;
   }
 
   function tileAt(mapState, x, y) { return mapState.tiles[M.tileKey(x, y)]; }
@@ -78,6 +170,25 @@
     playerState.resources[tile.resourceType] = U.clamp(playerState.resources[tile.resourceType] + captureBonus, 0, eff.storageCap[tile.resourceType]);
   }
 
+  /**
+   * 攻下一座城池格（不論原本是叛軍佔據還是敵勢力城池）：原擁有者（如果是某個
+   * 勢力而非叛軍）失去這座城池，攻方獲得一座全新的城池（建築從 0 級重新開始，
+   * 不會繼承原本的建設進度，避免打下敵方重兵發展的城池就直接原封不動接收帶來
+   * 的雪球效應）。
+   * @param {SaveGame} saveGame
+   * @param {PlayerState} playerState 攻方。
+   * @param {TileState} tile
+   * @param {number} now
+   */
+  function captureCityTile(saveGame, playerState, tile, now) {
+    if (tile.ownerFactionId && saveGame.players[tile.ownerFactionId]) {
+      delete saveGame.players[tile.ownerFactionId].cities[tile.cityId];
+    }
+    const city = M.createCityState(tile.cityId, playerState.factionId, tile.name, tile.x, tile.y, now);
+    playerState.cities[tile.cityId] = city;
+    tile.ownerFactionId = playerState.factionId;
+  }
+
   function ownedResourceTiles(mapState, factionId) {
     return Object.values(mapState.tiles).filter((t) => t.type === 'resource' && t.ownerFactionId === factionId);
   }
@@ -88,7 +199,13 @@
     return totals;
   }
 
+  /** 某勢力尚未收復／攻下的城池格（含自己本土仍被叛軍佔據、以及其他勢力的城池）。 */
+  function capturableCityTiles(mapState, factionId) {
+    return Object.values(mapState.tiles).filter((t) => t.type === 'city' && t.ownerFactionId !== factionId);
+  }
+
   window.Game.Systems.Map = {
-    generateMap, tileAt, capitalTileOf, captureResourceTile, ownedResourceTiles, ownedResourceYieldPerMin
+    generateMap, tileAt, capitalTileOf, captureResourceTile, captureCityTile,
+    ownedResourceTiles, ownedResourceYieldPerMin, capturableCityTiles
   };
 })();

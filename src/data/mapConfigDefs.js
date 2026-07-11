@@ -15,8 +15,8 @@
 
   /** @type {MapConfigDef} */
   const MAP_CONFIG = {
-    width: 17,
-    height: 17,
+    width: 29,
+    height: 29,
     tileSizePx: 64
   };
 

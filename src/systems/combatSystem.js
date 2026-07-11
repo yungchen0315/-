@@ -224,14 +224,14 @@
     const tile = saveGame.map.tiles[army.targetTileId];
     const battle = { attackerFactionId: playerState.factionId, attackerArmyId: army.id, targetName: tile ? tile.name : '未知地點', purpose: army.purpose, time: now };
 
-    if (!tile || (tile.type !== 'resource' && tile.type !== 'monster' && tile.type !== 'capital')) {
+    if (!tile || (tile.type !== 'resource' && tile.type !== 'monster' && tile.type !== 'capital' && tile.type !== 'city')) {
       Army.startReturn(playerState, army, now);
       playerState.battleLog.unshift(M.createBattleState(Object.assign(battle, { outcome: 'invalid', text: '目標已不存在，部隊折返。' })));
       trimBattleLog(playerState);
       return;
     }
 
-    if (tile.type === 'capital' && tile.ownerFactionId === playerState.factionId) {
+    if ((tile.type === 'capital' || tile.type === 'city') && tile.ownerFactionId === playerState.factionId) {
       Army.startReturn(playerState, army, now);
       return;
     }
@@ -292,6 +292,53 @@
       } else {
         battle.outcome = 'lose';
         battle.text = '進攻' + tile.name + '失利，部隊損失慘重，暫時撤退。';
+      }
+    } else if (tile.type === 'city') {
+      const prevOwnerFactionId = tile.ownerFactionId;
+      if (prevOwnerFactionId) {
+        // 攻打其他勢力已收復／攻下的城池：比照攻打主城的方式，以對方全部駐守部隊合計為守軍。
+        const defender = saveGame.players[prevOwnerFactionId];
+        const defEff = Econ.computeEffects(defender);
+        const garrison = Object.values(defender.armies).filter((a) => a.status === 'garrison');
+        const defUnits = U.sumDicts(garrison.map((a) => a.units));
+        const defenderHeroStateId = (garrison.find((a) => a.heroStateId) || {}).heroStateId || null;
+        result = resolveBattle({
+          attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerEff: eff, attackerPlayerState: playerState,
+          defenderUnits: defUnits, defenderHeroStateId, defenderEff: defEff, defenderPlayerState: defender,
+          wallBonusPct: defEff.defenseBonusPct + defEff.wallDefPct
+        });
+        const { remaining, losses } = applyCasualties(army.units, result.attackerLossRate);
+        army.units = remaining;
+        battle.losses = losses;
+        battle.defenderFactionId = prevOwnerFactionId;
+        if (result.winner === 'attacker') {
+          garrison.forEach((a) => { const c = applyCasualties(a.units, result.defenderLossRate); a.units = c.remaining; });
+          window.Game.Systems.Map.captureCityTile(saveGame, playerState, tile, now);
+          battle.outcome = 'win';
+          battle.text = '攻陷「' + tile.name + '」，從 ' + D.factionDefById(prevOwnerFactionId).name + ' 手中奪下此城，即刻起可派駐部隊、開始建設。';
+          if (army.heroStateId) window.Game.Systems.Hero.awardExp(playerState.heroes[army.heroStateId], 80);
+        } else {
+          battle.outcome = 'lose';
+          battle.text = '進攻「' + tile.name + '」失利，部隊損失慘重，暫時撤退。';
+        }
+      } else {
+        // 叛軍佔據，尚未被任何勢力收復。
+        result = resolveBattle({
+          attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerEff: eff, attackerPlayerState: playerState,
+          defenderStaticGuard: tile.guardPower
+        });
+        const { remaining, losses } = applyCasualties(army.units, result.attackerLossRate);
+        army.units = remaining;
+        battle.losses = losses;
+        if (result.winner === 'attacker') {
+          window.Game.Systems.Map.captureCityTile(saveGame, playerState, tile, now);
+          battle.outcome = 'win';
+          battle.text = '擊破叛軍，收復「' + tile.name + '」，即刻起可派駐部隊、開始建設。';
+          if (army.heroStateId) window.Game.Systems.Hero.awardExp(playerState.heroes[army.heroStateId], 50);
+        } else {
+          battle.outcome = 'lose';
+          battle.text = '進攻「' + tile.name + '」失利，部隊損失慘重，暫時撤退。';
+        }
       }
     } else {
       // monster：可重複刷，擊破後進入冷卻，而非永久佔領。
