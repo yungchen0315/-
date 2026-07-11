@@ -18,6 +18,11 @@
    * @property {number} nextAiTickAt AI 勢力下一次決策排程的時間戳。
    * @property {string} activeScreenId 目前選中的畫面分頁 id（純 UI 狀態，但為了讓玩家
    *   下次開遊戲回到同一畫面，一併存進存檔）。
+   * @property {Object<string,Object>} activeBattles 以地圖 tile id（"x_y"）為 key，記錄該格
+   *   「目前正在進行中」的地圖戰鬥（見 combatSystem.resolveArmyArrival／resolveActiveBattles）：
+   *   部隊抵達目標後不會立即結算，而是先登記一場進行中的戰鬥，地圖上會顯示交戰標記，
+   *   玩家點進該格能看到「觀戰」按鈕即時重播；時間到了才會真正結算傷亡／掠奪／佔領並移除
+   *   此筆紀錄。不存在或已過期即代表該格目前沒有戰鬥在進行。
    */
 
   /**
@@ -42,7 +47,8 @@
       map: window.Game.Models.createEmptyMapState(window.Game.Data.MAP_CONFIG.width, window.Game.Data.MAP_CONFIG.height),
       players,
       nextAiTickAt: now + 5 * 60000,
-      activeScreenId: 'city'
+      activeScreenId: 'city',
+      activeBattles: {}
     };
   }
 

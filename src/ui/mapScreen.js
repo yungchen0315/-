@@ -157,6 +157,7 @@
     const saveGame = window.GameSave;
     if (!saveGame || !View.ctx) return;
     const ctx = View.ctx, canvas = View.canvas;
+    const now = U.now();
     ctx.fillStyle = '#141f16';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -185,6 +186,12 @@
           drawGlyph(ctx, '⚔', sx, sy, 0.42, '#ffd9d9');
         }
 
+        // 只有這格「當下」正有戰鬥在進行時才會顯示這個交戰標記，平時完全看不到，
+        // 點進來才會出現觀戰按鈕（見 renderInfoPanel）。
+        if (window.Game.Systems.Combat.activeBattleAt(saveGame, tile.id, now)) {
+          drawBattleBadge(ctx, sx, sy, size, now);
+        }
+
         if (View.selectedTile && View.selectedTile.x === tx && View.selectedTile.y === ty) {
           ctx.strokeStyle = '#ffe08a';
           ctx.lineWidth = 3;
@@ -193,7 +200,6 @@
       }
     }
 
-    const now = U.now();
     Object.values(saveGame.players).forEach((p) => {
       Object.values(p.armies).forEach((army) => {
         if (army.status !== 'marching' && army.status !== 'returning') return;
@@ -261,6 +267,17 @@
     drawGlyph(ctx, D.RESOURCE_ICONS[tile.resourceType], sx, sy, 0.4, '#fff');
   }
 
+  /** 交戰標記：兩把交叉的劍，疊在原本的地塊圖案上，讓玩家一眼看出「這裡當下正在打仗」。 */
+  function drawBattleBadge(ctx, sx, sy, size, now) {
+    const pulse = 0.55 + 0.25 * Math.sin(now / 260);
+    ctx.fillStyle = 'rgba(200,20,20,' + (0.3 * pulse).toFixed(3) + ')';
+    ctx.fillRect(sx + 1, sy + 1, size - 2, size - 2);
+    ctx.strokeStyle = 'rgba(255,80,80,' + pulse.toFixed(3) + ')';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(sx + 2, sy + 2, size - 4, size - 4);
+    drawGlyph(ctx, '⚔️', sx, sy, 0.56, '#fff5f5');
+  }
+
   function drawLabel(ctx, text, sx, sy, size, color) {
     if (!text || size < 28) return;
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
@@ -290,6 +307,22 @@
     if (!tile || tile.type === 'empty') { panel.appendChild(U.el('div', 'emptyHint', '此處為空地')); return; }
 
     panel.appendChild(U.el('div', 'panelTitle', tile.name || '未知地點'));
+
+    // 地圖上的戰鬥平時完全看不到動畫，只有這格「當下」正有戰鬥在進行（地圖上會顯示交戰標記）
+    // 時，點進來才會出現觀戰按鈕；戰鬥一結算完，這個按鈕就會跟著消失。
+    const activeBattle = window.Game.Systems.Combat.activeBattleAt(saveGame, tile.id, U.now());
+    if (activeBattle) {
+      const spectateRow = U.el('div', 'exploreTargetRow');
+      spectateRow.appendChild(U.el('span', '', '⚔ 此處正在交戰中！'));
+      const spectateBtn = U.el('button', 'smallBtn', '觀戰');
+      U.onTap(spectateBtn, () => {
+        const attackerState = saveGame.players[activeBattle.attackerFactionId];
+        if (!attackerState) return;
+        window.Game.UI.BattleScreen.play(attackerState, activeBattle, () => renderInfoPanel(saveGame, playerState));
+      });
+      spectateRow.appendChild(spectateBtn);
+      panel.appendChild(spectateRow);
+    }
 
     if (tile.type === 'capital') {
       panel.appendChild(U.el('div', 'subHint', D.factionDefById(tile.ownerFactionId).desc));

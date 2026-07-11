@@ -4,9 +4,11 @@
 
 (function () {
   /**
-   * @typedef {'garrison'|'marching'|'returning'} ArmyStatus
+   * @typedef {'garrison'|'marching'|'fighting'|'returning'} ArmyStatus
    * - garrison：駐守於城池，可指派主將、可整編、可派遣出征。
    * - marching：正在前往目標地點的路上。
+   * - fighting：已抵達目標，戰鬥正在進行中（見 combatSystem 的 activeBattles）；
+   *   傷亡／掠奪／佔領尚未結算，地圖上該地塊會顯示交戰標記，可點進去觀戰。
    * - returning：戰鬥／行動已結算完畢，正在返回城池的路上。
    */
 
