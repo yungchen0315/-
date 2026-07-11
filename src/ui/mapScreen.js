@@ -26,6 +26,15 @@
     canvas.addEventListener('touchmove', onTouchMove, { passive: false });
     window.addEventListener('touchend', onTouchEnd, { passive: false });
     canvas.addEventListener('click', onClickFallback);
+
+    // 選取地塊後 #mapInfoPanel 內容變長，flexbox 會把畫布的實際版面高度往上擠壓，
+    // 但 canvas 的繪圖緩衝區尺寸（canvas.width/height）不會自動跟著變，兩者一旦
+    // 不同步，之後每次點擊换算出來的世界座標就會跟畫面上看到的格子對不起來
+    // （點到的格子跟顯示的格子錯位）。用 ResizeObserver 讓緩衝區尺寸即時跟上。
+    if (window.ResizeObserver) {
+      const observer = new ResizeObserver(() => { resize(); draw(); });
+      observer.observe(canvas.parentElement);
+    }
   }
 
   function resize() {

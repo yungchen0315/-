@@ -179,6 +179,7 @@ button, .navBtn, select {
 .trainUnitRow.locked { opacity: 0.5; }
 .unitIcon { font-size: 16px; }
 .unitName { flex: 0 0 auto; min-width: 46px; }
+.unitStats { flex: 0 0 auto; color: #9fd18a; font-size: 11px; }
 .unitCost { flex: 1 1 auto; color: #bcae8f; font-size: 11px; }
 .lockedHint { font-size: 11px; color: #8a8070; }
 .armyCard {
@@ -372,7 +373,8 @@ button, .navBtn, select {
 .battleField { position: relative; margin-top: 14px; min-height: 60px; display: flex; align-items: center; justify-content: space-between; }
 .battleTroopRow { flex: 1 1 0; display: flex; flex-wrap: wrap; gap: 4px; font-size: 13px; transition: opacity 0.3s ease; }
 .battleTroopRowRight { justify-content: flex-end; }
-.battleTroopIcon { background: rgba(255,255,255,0.06); border-radius: 6px; padding: 2px 5px; }
+.battleTroopIcon { background: rgba(255,255,255,0.06); border-radius: 6px; padding: 2px 5px; text-align: center; }
+.battleTroopStat { font-size: 10px; color: #bcae8f; }
 .battleFlashText {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   font-size: 14px; font-weight: bold; color: #ffe9b3; text-shadow: 0 0 6px rgba(0,0,0,0.8);

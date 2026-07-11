@@ -127,14 +127,16 @@
     const field = U.el('div', 'battleField');
     const atkTroops = U.el('div', 'battleTroopRow');
     unitRow(opts.attackerUnitsBefore).forEach((e) => {
-      atkTroops.appendChild(U.el('span', 'battleTroopIcon', e.def.icon + '×' + e.qty));
+      atkTroops.appendChild(U.el('span', 'battleTroopIcon', e.def.icon + '×' + e.qty +
+        '<br><span class="battleTroopStat">攻' + e.def.stats.atk + ' 防' + e.def.stats.def + '</span>'));
     });
     field.appendChild(atkTroops);
     const flash = U.el('div', 'battleFlashText');
     field.appendChild(flash);
     const defTroops = U.el('div', 'battleTroopRow battleTroopRowRight');
     unitRow(opts.defenderUnitsBefore).forEach((e) => {
-      defTroops.appendChild(U.el('span', 'battleTroopIcon', e.def.icon + '×' + e.qty));
+      defTroops.appendChild(U.el('span', 'battleTroopIcon', e.def.icon + '×' + e.qty +
+        '<br><span class="battleTroopStat">攻' + e.def.stats.atk + ' 防' + e.def.stats.def + '</span>'));
     });
     field.appendChild(defTroops);
     box.appendChild(field);
