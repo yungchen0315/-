@@ -68,20 +68,21 @@
     if (!home) return;
     if (Math.random() > 0.35) return;
 
-    const city = Army.primaryCity(playerState);
-    const myTile = { x: city.tileX, y: city.tileY };
+    // AI 與玩家共用同一條「連鎖佔領」規則：只能打與自己領土相鄰的目標，逼 AI 也
+    // 從自家地盤逐步向外擴張，而不是一開局就遠征地圖另一端。
+    const Map = window.Game.Systems.Map;
+    const attackable = Map.attackableTargetKeys(saveGame.map, playerState.factionId);
     const candidates = Object.values(saveGame.map.tiles).filter((t) => {
       if (t.type !== 'resource' && t.type !== 'monster') return false;
-      if (t.type === 'resource' && t.ownerFactionId) return false;
+      if (!attackable.has(t.id)) return false;
       if (t.type === 'monster' && t.cooldownUntil > now) return false;
-      const d = U.tileDistance(myTile, t);
-      return d > 0 && d <= 6 && t.guardPower <= Army.unitCount(home) * 3;
+      return t.guardPower <= Army.unitCount(home) * 3;
     });
 
     const myPower = Econ.computePower(playerState);
     const cityCandidates = Object.values(saveGame.map.tiles).filter((t) => {
       if (t.type !== 'city' || t.ownerFactionId === playerState.factionId) return false;
-      if (U.tileDistance(myTile, t) > 14) return false;
+      if (!attackable.has(t.id)) return false;
       if (!t.ownerFactionId) return t.guardPower <= Army.unitCount(home) * 3; // 叛軍佔據，比照野外據點守備力判斷。
       return myPower > Econ.computePower(saveGame.players[t.ownerFactionId]) * 1.3; // 攻打其他勢力的城池，需要戰力優勢。
     });
@@ -91,10 +92,10 @@
     const player = Object.values(saveGame.players).find((p) => p.isHuman);
     if (player) {
       const playerPower = Econ.computePower(player);
-      const canAttackPlayer = myPower > playerPower * 1.4 && Math.random() < 0.2;
+      const playerCap = Map.capitalTileOf(saveGame.map, player.factionId);
+      const canAttackPlayer = myPower > playerPower * 1.4 && Math.random() < 0.2 && playerCap && attackable.has(playerCap.id);
       if (canAttackPlayer) {
-        const playerCity = Army.primaryCity(player);
-        Army.sendArmyToTile(playerState, home.id, { x: playerCity.tileX, y: playerCity.tileY }, 'attack', now);
+        Army.sendArmyToTile(saveGame, playerState, home.id, { x: playerCap.x, y: playerCap.y }, 'attack', now);
         return;
       }
     }
@@ -104,7 +105,7 @@
     else if (cityCandidates.length && Math.random() < 0.4) { target = U.choice(cityCandidates); purpose = 'attack'; }
     else if (candidates.length) { target = U.choice(candidates); purpose = 'raid'; }
     if (!target) return;
-    Army.sendArmyToTile(playerState, home.id, { x: target.x, y: target.y }, purpose, now);
+    Army.sendArmyToTile(saveGame, playerState, home.id, { x: target.x, y: target.y }, purpose, now);
   }
 
   window.Game.Systems.Ai = { tick };

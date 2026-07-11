@@ -165,11 +165,26 @@
     const endTx = Math.ceil((View.camX + canvas.width) / View.tilePx), endTy = Math.ceil((View.camY + canvas.height) / View.tilePx);
     const size = View.tilePx;
 
+    // 連鎖佔領視覺化：算出玩家的領土範圍與目前可出兵的目標格，讓「我的地盤到哪、
+    // 我現在能打哪」在地圖上一目了然（每次重繪算一次，成本很低）。
+    const human = Object.values(saveGame.players).find((p) => p.isHuman);
+    const MapSys = window.Game.Systems.Map;
+    const reachKeys = human ? MapSys.territoryReachKeys(saveGame.map, human.factionId) : new Set();
+    const attackKeys = human ? MapSys.attackableTargetKeys(saveGame.map, human.factionId) : new Set();
+    const humanColor = human ? D.factionDefById(human.factionId).color : '#ffe08a';
+
     for (let ty = Math.max(0, startTy); ty <= Math.min(D.MAP_CONFIG.height - 1, endTy); ty++) {
       for (let tx = Math.max(0, startTx); tx <= Math.min(D.MAP_CONFIG.width - 1, endTx); tx++) {
         const tile = window.Game.Systems.Map.tileAt(saveGame.map, tx, ty);
         const sx = tx * View.tilePx - View.camX, sy = ty * View.tilePx - View.camY;
         drawTerrain(ctx, tile, sx, sy, size - 1);
+        // 領土影響範圍：領土往外 2 格內的格子鋪一層淡淡的勢力色，畫出「你的地盤」。
+        if (reachKeys.has(tile.id)) {
+          ctx.globalAlpha = 0.12;
+          ctx.fillStyle = humanColor;
+          ctx.fillRect(sx, sy, size - 1, size - 1);
+          ctx.globalAlpha = 1;
+        }
         ctx.strokeStyle = 'rgba(0,0,0,0.15)';
         ctx.lineWidth = 1;
         ctx.strokeRect(sx + 0.5, sy + 0.5, size - 2, size - 2);
@@ -184,6 +199,16 @@
           ctx.fillStyle = 'rgba(138,43,43,0.35)';
           ctx.fillRect(sx + 1, sy + 1, size - 3, size - 3);
           drawGlyph(ctx, '⚔', sx, sy, 0.42, '#ffd9d9');
+        }
+
+        // 可出兵目標：與領土相鄰、現在就能派兵攻打的據點／城池，用一圈黃色虛線框標出，
+        // 讓玩家清楚看到「連鎖佔領」的下一步能往哪打。
+        if (attackKeys.has(tile.id)) {
+          ctx.strokeStyle = 'rgba(255,224,138,0.9)';
+          ctx.setLineDash([4, 3]);
+          ctx.lineWidth = 2;
+          ctx.strokeRect(sx + 2.5, sy + 2.5, size - 5, size - 5);
+          ctx.setLineDash([]);
         }
 
         // 只有這格「當下」正有戰鬥在進行時才會顯示這個交戰標記，平時完全看不到，
@@ -351,6 +376,13 @@
       panel.appendChild(U.el('div', 'subHint', onCooldown ? ('據點恢復中：' + U.formatCountdown(tile.cooldownUntil - U.now())) : ('守備力：約 ' + tile.guardPower)));
     }
 
+    // 連鎖佔領：出兵前先檢查此地是否與玩家領土相鄰，不相鄰就不給出兵按鈕，改顯示提示。
+    const reachable = window.Game.Systems.Map.canAttackTile(saveGame.map, playerState.factionId, tile);
+    if (!reachable.ok) {
+      panel.appendChild(U.el('div', 'emptyHint', reachable.reason));
+      return;
+    }
+
     const garrisonArmies = Object.values(playerState.armies).filter((a) => a.status === 'garrison' && window.Game.Systems.Army.unitCount(a) > 0);
     if (garrisonArmies.length === 0) {
       panel.appendChild(U.el('div', 'emptyHint', '目前沒有可派遣的駐守部隊。'));
@@ -362,7 +394,7 @@
       row.appendChild(U.el('span', '', army.name + '（' + window.Game.Systems.Army.unitCount(army) + ' 兵）'));
       const btn = U.el('button', 'smallBtn', purpose === 'attack' ? '出征' : '派遣');
       U.onTap(btn, () => {
-        const r = window.Game.Systems.Army.sendArmyToTile(playerState, army.id, { x: tile.x, y: tile.y }, purpose, U.now());
+        const r = window.Game.Systems.Army.sendArmyToTile(saveGame, playerState, army.id, { x: tile.x, y: tile.y }, purpose, U.now());
         if (r.ok) {
           Dlg.toast(army.name + ' 已出發，預計 ' + U.formatDurationWords(r.etaMs) + ' 後抵達');
           window.Game.UI.Bootstrap.refreshArmyScreenIfActive();

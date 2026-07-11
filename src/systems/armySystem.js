@@ -84,11 +84,14 @@
     return true;
   }
 
-  function sendArmyToTile(playerState, armyId, targetTile, purpose, now) {
+  function sendArmyToTile(saveGame, playerState, armyId, targetTile, purpose, now) {
     const army = playerState.armies[armyId];
     if (!army) return { ok: false, reason: '找不到部隊' };
     if (army.status !== 'garrison') return { ok: false, reason: '部隊行軍中' };
     if (unitCount(army) === 0) return { ok: false, reason: '部隊沒有兵力' };
+    const targetTileState = saveGame.map.tiles[M.tileKey(targetTile.x, targetTile.y)];
+    const reachable = window.Game.Systems.Map.canAttackTile(saveGame.map, playerState.factionId, targetTileState);
+    if (!reachable.ok) return { ok: false, reason: reachable.reason };
     const city = primaryCity(playerState);
     const origin = { x: city.tileX, y: city.tileY };
     const dist = U.tileDistance(origin, targetTile) || 1;
