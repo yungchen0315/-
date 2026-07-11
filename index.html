@@ -33,18 +33,18 @@
       <div id="mapInfoPanel" class="panel"></div>
     </section>
 
-    <section id="screenGenerals" class="screen"></section>
+    <section id="screenHero" class="screen"></section>
     <section id="screenArmy" class="screen"></section>
-    <section id="screenCampaign" class="screen"></section>
+    <section id="screenMission" class="screen"></section>
     <section id="screenReport" class="screen"></section>
   </main>
 
   <nav id="bottomNav">
     <button class="navBtn navActive" data-screen="city">🏯<span>城池</span></button>
     <button class="navBtn" data-screen="map">🗺️<span>地圖</span></button>
-    <button class="navBtn" data-screen="generals">🎖️<span>武將</span></button>
+    <button class="navBtn" data-screen="hero">🎖️<span>武將</span></button>
     <button class="navBtn" data-screen="army">⚔️<span>軍隊</span></button>
-    <button class="navBtn" data-screen="campaign">📜<span>戰役</span></button>
+    <button class="navBtn" data-screen="mission">📜<span>戰役</span></button>
     <button class="navBtn" data-screen="report">📰<span>戰報</span></button>
   </nav>
 
@@ -54,6 +54,7 @@
     <div id="setupBox">
       <div id="setupTitle">皇者天下</div>
       <div id="setupSubtitle">三國．單機戰略</div>
+      <div id="legacyNotice" class="legacyNotice" style="display:none;">遊戲引擎已升級，舊版進度無法沿用，請開始新遊戲。</div>
       <button id="continueBtn" class="setupBtn">繼續遊戲</button>
       <button id="newGameBtn" class="setupBtn">開始新遊戲</button>
     </div>
@@ -61,23 +62,61 @@
 
 </div>
 
-<script src="js/data.js"></script>
-<script src="js/utils.js"></script>
-<script src="js/save.js"></script>
-<script src="js/dialog.js"></script>
-<script src="js/items.js"></script>
-<script src="js/skills.js"></script>
-<script src="js/state.js"></script>
-<script src="js/events.js"></script>
-<script src="js/achievements.js"></script>
-<script src="js/research.js"></script>
-<script src="js/army.js"></script>
-<script src="js/city.js"></script>
-<script src="js/generals.js"></script>
-<script src="js/map.js"></script>
-<script src="js/ai.js"></script>
-<script src="js/campaign.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/game.js"></script>
+<script src="src/utils/namespace.js"></script>
+<script src="src/utils/idUtils.js"></script>
+<script src="src/utils/timeUtils.js"></script>
+<script src="src/utils/mathUtils.js"></script>
+<script src="src/utils/resourceMath.js"></script>
+<script src="src/utils/domUtils.js"></script>
+
+<script src="src/data/factionDefs.js"></script>
+<script src="src/data/resourceDefs.js"></script>
+<script src="src/data/buildingDefs.js"></script>
+<script src="src/data/unitDefs.js"></script>
+<script src="src/data/heroDefs.js"></script>
+<script src="src/data/technologyDefs.js"></script>
+<script src="src/data/missionDefs.js"></script>
+<script src="src/data/itemDefs.js"></script>
+<script src="src/data/eventTypeDefs.js"></script>
+<script src="src/data/achievementDefs.js"></script>
+<script src="src/data/mapConfigDefs.js"></script>
+
+<script src="src/models/ResourceState.js"></script>
+<script src="src/models/BuildingState.js"></script>
+<script src="src/models/CityState.js"></script>
+<script src="src/models/HeroState.js"></script>
+<script src="src/models/ArmyState.js"></script>
+<script src="src/models/MapState.js"></script>
+<script src="src/models/BattleState.js"></script>
+<script src="src/models/MissionState.js"></script>
+<script src="src/models/TechnologyState.js"></script>
+<script src="src/models/PlayerState.js"></script>
+<script src="src/models/SaveGame.js"></script>
+
+<script src="src/systems/economySystem.js"></script>
+<script src="src/systems/cityBuildingSystem.js"></script>
+<script src="src/systems/heroSystem.js"></script>
+<script src="src/systems/armySystem.js"></script>
+<script src="src/systems/combatSystem.js"></script>
+<script src="src/systems/mapSystem.js"></script>
+<script src="src/systems/missionSystem.js"></script>
+<script src="src/systems/technologySystem.js"></script>
+<script src="src/systems/eventSystem.js"></script>
+<script src="src/systems/achievementSystem.js"></script>
+<script src="src/systems/aiSystem.js"></script>
+<script src="src/systems/newGameSystem.js"></script>
+<script src="src/systems/saveSystem.js"></script>
+<script src="src/systems/gameLoopSystem.js"></script>
+
+<script src="src/ui/dialog.js"></script>
+<script src="src/ui/topBar.js"></script>
+<script src="src/ui/bottomNav.js"></script>
+<script src="src/ui/cityScreen.js"></script>
+<script src="src/ui/mapScreen.js"></script>
+<script src="src/ui/heroScreen.js"></script>
+<script src="src/ui/armyScreen.js"></script>
+<script src="src/ui/missionScreen.js"></script>
+<script src="src/ui/reportScreen.js"></script>
+<script src="src/ui/bootstrap.js"></script>
 </body>
 </html>

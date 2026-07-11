@@ -4,9 +4,18 @@
 
 (function () {
   const SAVE_KEY = 'huangzhe_tianxia_save_v2_src';
+  const LEGACY_SAVE_KEY = 'huangzhe_tianxia_save_v1';
 
   function hasSave() {
     try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; }
+  }
+
+  function hasLegacySave() {
+    try { return !localStorage.getItem(SAVE_KEY) && !!localStorage.getItem(LEGACY_SAVE_KEY); } catch (e) { return false; }
+  }
+
+  function deleteLegacySave() {
+    try { localStorage.removeItem(LEGACY_SAVE_KEY); } catch (e) { /* ignore */ }
   }
 
   /** @param {SaveGame} saveGame */
@@ -36,5 +45,5 @@
     try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ }
   }
 
-  window.Game.Systems.Save = { SAVE_KEY, hasSave, saveToLocalStorage, loadFromLocalStorage, deleteSave };
+  window.Game.Systems.Save = { SAVE_KEY, hasSave, hasLegacySave, deleteLegacySave, saveToLocalStorage, loadFromLocalStorage, deleteSave };
 })();

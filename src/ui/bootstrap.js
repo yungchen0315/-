@@ -16,6 +16,10 @@
     const saved = window.Game.Systems.Save.hasSave();
     const overlay = document.getElementById('setupOverlay');
     document.getElementById('continueBtn').style.display = saved ? '' : 'none';
+    if (!saved && window.Game.Systems.Save.hasLegacySave()) {
+      document.getElementById('legacyNotice').style.display = '';
+      window.Game.Systems.Save.deleteLegacySave();
+    }
     overlay.classList.add('activeOverlay');
 
     U.onTap(document.getElementById('continueBtn'), () => { overlay.classList.remove('activeOverlay'); startWithSave(); });
