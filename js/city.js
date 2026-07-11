@@ -22,11 +22,11 @@ function canStartUpgrade(faction, type) {
   return { ok: true, info };
 }
 
-function startUpgrade(faction, type) {
+function startUpgrade(faction, type, now) {
   const check = canStartUpgrade(faction, type);
   if (!check.ok) return check;
   payCost(faction.resources, check.info.cost);
-  const now = nowMs();
+  now = now || nowMs();
   faction.activeBuildUpgrade = {
     buildingType: type,
     targetLevel: check.info.targetLevel,

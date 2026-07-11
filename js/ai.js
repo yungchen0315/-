@@ -13,47 +13,50 @@ function aiTick(state, now) {
 }
 
 function runAiFaction(state, faction, now) {
-  aiTryUpgrade(faction);
-  aiTryTrain(faction);
-  aiTryResearch(faction);
-  aiTryExplore(faction);
+  aiTryUpgrade(faction, now);
+  aiTryTrain(faction, now);
+  aiTryResearch(faction, now);
+  aiTryExplore(faction, now);
   aiTryMarch(state, faction, now);
 }
 
-function aiTryResearch(faction) {
+// 全部使用 aiTick 傳入的模擬時間 now，不能用 nowMs()（真實系統時間）——
+// 離線追趕時 now 可能是幾十小時前的模擬時間點，用真實時間會讓補算出的
+// 升級／訓練／研究完成時間全部被推到「現在」之後，導致離線期間 AI 完全長不大。
+function aiTryResearch(faction, now) {
   if (typeof availableTechs !== 'function') return;
   if (faction.researchQueue.length > 0) return;
   const techs = availableTechs(faction).filter((t) => canQueueResearch(faction, t.id).ok);
   if (techs.length === 0) return;
-  queueResearch(faction, choice(techs).id);
+  queueResearch(faction, choice(techs).id, now);
 }
 
-function aiTryUpgrade(faction) {
+function aiTryUpgrade(faction, now) {
   if (faction.activeBuildUpgrade) return;
   const candidates = BUILDING_ORDER.filter((type) => canStartUpgrade(faction, type).ok);
   if (candidates.length === 0) return;
   const type = choice(candidates);
-  startUpgrade(faction, type);
+  startUpgrade(faction, type, now);
 }
 
-function aiTryTrain(faction) {
+function aiTryTrain(faction, now) {
   ['barracks', 'drillground'].forEach((bt) => {
     if (faction.buildings[bt].level <= 0) return;
     if (faction.trainQueues[bt].length > 0) return;
     const units = trainableUnitsFor(bt).filter((u) => canQueueTraining(faction, bt, u, 5).ok);
     if (units.length === 0) return;
-    queueTraining(faction, bt, choice(units), 5);
+    queueTraining(faction, bt, choice(units), 5, now);
   });
 }
 
-function aiTryExplore(faction) {
+function aiTryExplore(faction, now) {
   if (faction.buildings.tavern.level <= 0) return;
   const eff = factionEffects(faction);
   if (faction.exploreSlots.length >= eff.exploreSlots) return;
   const targets = availableExploreTargets(faction);
   if (targets.length === 0) return;
   if (Math.random() > 0.5) return;
-  startExplore(faction, choice(targets).id);
+  startExplore(faction, choice(targets).id, now);
 }
 
 function aiTryMarch(state, faction, now) {

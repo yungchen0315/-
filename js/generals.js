@@ -13,7 +13,7 @@ function availableExploreTargets(faction) {
   return GENERALS.filter((g) => g.faction === faction.id && g.source.type === 'explore' && !owned.has(g.id));
 }
 
-function startExplore(faction, generalId) {
+function startExplore(faction, generalId, now) {
   const eff = factionEffects(faction);
   if (faction.buildings.tavern.level <= 0) return { ok: false, reason: '需先建造酒館' };
   if (faction.exploreSlots.length >= eff.exploreSlots) return { ok: false, reason: '探索隊已全數派出' };
@@ -23,7 +23,7 @@ function startExplore(faction, generalId) {
   const cost = { gold: 150 };
   if (!canAfford(faction.resources, cost)) return { ok: false, reason: '銀兩不足' };
   payCost(faction.resources, cost);
-  const now = nowMs();
+  now = now || nowMs();
   const timeMs = Math.round(EXPLORE_BASE_MS / (eff.exploreSpeedMul || 1));
   faction.exploreSlots.push({ id: uid('explore'), generalId, startAt: now, completeAt: now + timeMs });
   return { ok: true };

@@ -326,14 +326,14 @@ function canQueueTraining(faction, buildingType, unitType, qty) {
   return { ok: true, cost, unit, buildingLevel };
 }
 
-function queueTraining(faction, buildingType, unitType, qty) {
+function queueTraining(faction, buildingType, unitType, qty, now) {
   const check = canQueueTraining(faction, buildingType, unitType, qty);
   if (!check.ok) return check;
   payCost(faction.resources, check.cost);
   const eff = factionEffects(faction);
   const mul = eff.trainSpeedMul[buildingType] * (1 + (eff.trainSpeedPct || 0) / 100);
   const timeMs = Math.round((check.unit.trainTimeMs * qty) / mul);
-  const now = nowMs();
+  now = now || nowMs();
   const prevTail = faction.trainQueues[buildingType].length
     ? faction.trainQueues[buildingType][faction.trainQueues[buildingType].length - 1].completeAt
     : now;
