@@ -14,6 +14,7 @@
    */
   function advanceTime(saveGame, now) {
     Object.values(saveGame.players).forEach((playerState) => tickPlayer(saveGame, playerState, now));
+    window.Game.Systems.Combat.resolveActiveBattles(saveGame, now);
 
     let iterations = 0;
     while (now >= saveGame.nextAiTickAt && iterations < AI_TICK_MAX_CATCHUP) {

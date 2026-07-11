@@ -56,7 +56,7 @@
     const marchingArmies = armies.filter((a) => a.status !== 'garrison');
     if (marchingArmies.length > 0) {
       const marchPanel = U.el('div', 'panel marchPanel');
-      marchPanel.appendChild(U.el('div', 'panelTitle', '行軍中部隊（' + marchingArmies.length + '）'));
+      marchPanel.appendChild(U.el('div', 'panelTitle', '出征中部隊（' + marchingArmies.length + '）'));
       marchingArmies.forEach((army) => { marchPanel.appendChild(buildArmyCard(container, saveGame, playerState, army, false)); });
       container.appendChild(marchPanel);
     }
@@ -119,7 +119,20 @@
       card.appendChild(assignRow);
     }
 
-    if (army.status !== 'garrison') {
+    if (army.status === 'fighting') {
+      const destName = marchTargetName(saveGame, playerState, army);
+      card.appendChild(U.el('div', 'armyDestination', '交戰地點：' + destName));
+      const activeBattle = saveGame.activeBattles && saveGame.activeBattles[army.targetTileId];
+      if (activeBattle) {
+        const progress = U.clamp((U.now() - activeBattle.startAt) / Math.max(1, activeBattle.endAt - activeBattle.startAt), 0, 1);
+        const barWrap = U.el('div', 'marchBarWrap');
+        const bar = U.el('div', 'marchBar');
+        bar.style.width = Math.round(progress * 100) + '%';
+        barWrap.appendChild(bar);
+        card.appendChild(barWrap);
+      }
+      card.appendChild(U.el('div', 'timerText', '⚔ 戰鬥進行中，前往地圖點選該地可觀戰'));
+    } else if (army.status !== 'garrison') {
       const destName = marchTargetName(saveGame, playerState, army);
       card.appendChild(U.el('div', 'armyDestination', (army.status === 'marching' ? '目的地：' : '返回：') + destName));
       const progress = U.clamp((U.now() - army.departAt) / Math.max(1, army.arriveAt - army.departAt), 0, 1);
@@ -147,7 +160,7 @@
   }
 
   function marchTargetName(saveGame, playerState, army) {
-    const key = army.status === 'marching' ? army.targetTileId : null;
+    const key = (army.status === 'marching' || army.status === 'fighting') ? army.targetTileId : null;
     if (army.status === 'returning') return '本城';
     const tile = key ? saveGame.map.tiles[key] : null;
     if (!tile) return '未知地點';
@@ -157,6 +170,7 @@
   function armyStatusLabel(army) {
     if (army.status === 'garrison') return '駐守中';
     if (army.status === 'marching') return '行軍中';
+    if (army.status === 'fighting') return '交戰中';
     return '返回中';
   }
 

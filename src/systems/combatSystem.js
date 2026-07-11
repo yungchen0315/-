@@ -190,42 +190,153 @@
     if (playerState.battleLog.length > 40) playerState.battleLog.length = 40;
   }
 
-  /** 地圖上「觀戰」重播資料的可用時長：戰鬥結算後，這段時間內點回該地塊仍能看到觀戰按鈕。 */
-  const MAP_BATTLE_REPLAY_WINDOW_MS = 3 * 60000;
-
-  /** 野外據點／叛軍守軍沒有實際的兵種組成，依守備力換算出一組步兵，僅供觀戰動畫顯示用。 */
+  /** 野外據點／叛軍守軍沒有實際的兵種組成，依守備力換算出一組步兵，僅供戰鬥動畫顯示用。 */
   function guardDisplayUnits(guardPower) {
     return { infantry: Math.max(1, Math.round((guardPower || 0) / 15)) };
   }
 
+  const MAP_BATTLE_MIN_DURATION_MS = 6000;
+  const MAP_BATTLE_MS_PER_EVENT = 900;
+
   /**
-   * 記錄一場地圖戰鬥的「觀戰」回放資料，供玩家之後點選該地塊時可重播戰鬥動畫。
-   * @param {SaveGame} saveGame
-   * @param {string} tileId
-   * @param {Object} replay battleScreen.play() 所需的 opts（title/attackerUnitsBefore/timeline/...）。
-   * @param {number} now
+   * 把一場地圖戰鬥登記為「進行中」：部隊狀態改為 fighting（暫時消失於行軍動畫，
+   * 改由地塊上的觀戰標記代表它正在這裡交戰），並依 timeline 長度換算出一段
+   * 近似戰役動畫實際播放時間的持續時間——這段時間內，地塊會顯示觀戰用的
+   * 交戰標記，玩家點進來能看到「觀戰」按鈕即時重播這場戰鬥；時間到才會
+   * 真正結算傷亡／掠奪／佔領（見 resolveActiveBattles／settleMapBattle）。
    */
-  function recordMapBattleReplay(saveGame, tileId, replay, now) {
-    if (!saveGame.mapBattles) saveGame.mapBattles = {};
-    saveGame.mapBattles[tileId] = Object.assign({}, replay, { time: now, expiresAt: now + MAP_BATTLE_REPLAY_WINDOW_MS });
+  function beginMapBattle(saveGame, tile, army, engagement, now) {
+    army.status = 'fighting';
+    const durationMs = Math.max(MAP_BATTLE_MIN_DURATION_MS, engagement.timeline.length * MAP_BATTLE_MS_PER_EVENT + 1500);
+    if (!saveGame.activeBattles) saveGame.activeBattles = {};
+    saveGame.activeBattles[tile.id] = Object.assign({}, engagement, { tileId: tile.id, armyId: army.id, startAt: now, endAt: now + durationMs });
+  }
+
+  /** 某地塊目前是否有正在進行中的戰鬥（供地圖畫面顯示交戰標記／觀戰按鈕）。過期或不存在則回傳 null。 */
+  function activeBattleAt(saveGame, tileId, now) {
+    if (!saveGame.activeBattles) return null;
+    const rec = saveGame.activeBattles[tileId];
+    if (!rec || now >= rec.endAt) return null;
+    return rec;
+  }
+
+  function engageCapitalBattle(saveGame, playerState, army, tile, eff, attackerUnitsBefore) {
+    const Econ = window.Game.Systems.Economy;
+    const defender = saveGame.players[tile.ownerFactionId];
+    const defEff = Econ.computeEffects(defender);
+    const garrison = Object.values(defender.armies).filter((a) => a.status === 'garrison');
+    const defUnits = U.sumDicts(garrison.map((a) => a.units));
+    const defenderHeroStateId = (garrison.find((a) => a.heroStateId) || {}).heroStateId || null;
+    const result = resolveBattle({
+      attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerEff: eff, attackerPlayerState: playerState,
+      defenderUnits: defUnits, defenderHeroStateId, defenderEff: defEff, defenderPlayerState: defender,
+      wallBonusPct: defEff.defenseBonusPct + defEff.wallDefPct
+    });
+    const win = result.winner === 'attacker';
+    const resultText = win
+      ? '成功襲擾 ' + D.factionDefById(tile.ownerFactionId).name + ' 主城，掠奪資源並重創守軍。'
+      : '進攻 ' + D.factionDefById(tile.ownerFactionId).name + ' 主城失利，部隊損失慘重。';
+    return {
+      kind: 'capital', attackerFactionId: playerState.factionId, defenderFactionId: tile.ownerFactionId,
+      targetName: tile.name, purpose: army.purpose,
+      title: '襲擾「' + tile.name + '」', attackerHeroStateId: army.heroStateId, attackerUnitsBefore,
+      defenderHeroStateId, defenderUnitsBefore: defUnits, defenderName: D.factionDefById(tile.ownerFactionId).name + ' 守軍',
+      timeline: result.timeline, win, resultText, result
+    };
+  }
+
+  function engageResourceBattle(playerState, army, tile, eff, attackerUnitsBefore) {
+    const defenderUnitsBefore = guardDisplayUnits(tile.guardPower);
+    const result = resolveBattle({
+      attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerEff: eff, attackerPlayerState: playerState,
+      defenderStaticGuard: tile.guardPower
+    });
+    const win = result.winner === 'attacker';
+    const resultText = win
+      ? '攻佔' + tile.name + '，即刻起持續獲得每分鐘 ' + tile.yieldPerMin + ' ' + D.RESOURCE_NAMES[tile.resourceType] + '的固定產出。'
+      : '進攻' + tile.name + '失利，部隊損失慘重，暫時撤退。';
+    return {
+      kind: 'resource', attackerFactionId: playerState.factionId,
+      targetName: tile.name, purpose: army.purpose,
+      title: '進攻「' + tile.name + '」', attackerHeroStateId: army.heroStateId, attackerUnitsBefore,
+      defenderHeroStateId: null, defenderUnitsBefore, defenderName: tile.name + '守軍',
+      timeline: result.timeline, win, resultText, result
+    };
+  }
+
+  function engageCityBattle(saveGame, playerState, army, tile, eff, attackerUnitsBefore) {
+    const prevOwnerFactionId = tile.ownerFactionId;
+    if (!prevOwnerFactionId) {
+      const defenderUnitsBefore = guardDisplayUnits(tile.guardPower);
+      const result = resolveBattle({
+        attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerEff: eff, attackerPlayerState: playerState,
+        defenderStaticGuard: tile.guardPower
+      });
+      const win = result.winner === 'attacker';
+      const resultText = win
+        ? '擊破叛軍，收復「' + tile.name + '」，即刻起可派駐部隊、開始建設。'
+        : '進攻「' + tile.name + '」失利，部隊損失慘重，暫時撤退。';
+      return {
+        kind: 'city', attackerFactionId: playerState.factionId,
+        targetName: tile.name, purpose: army.purpose,
+        title: '進攻「' + tile.name + '」', attackerHeroStateId: army.heroStateId, attackerUnitsBefore,
+        defenderHeroStateId: null, defenderUnitsBefore, defenderName: '叛軍守備隊',
+        timeline: result.timeline, win, resultText, result
+      };
+    }
+    const Econ = window.Game.Systems.Economy;
+    const defender = saveGame.players[prevOwnerFactionId];
+    const defEff = Econ.computeEffects(defender);
+    const garrison = Object.values(defender.armies).filter((a) => a.status === 'garrison');
+    const defUnits = U.sumDicts(garrison.map((a) => a.units));
+    const defenderHeroStateId = (garrison.find((a) => a.heroStateId) || {}).heroStateId || null;
+    const result = resolveBattle({
+      attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerEff: eff, attackerPlayerState: playerState,
+      defenderUnits: defUnits, defenderHeroStateId, defenderEff: defEff, defenderPlayerState: defender,
+      wallBonusPct: defEff.defenseBonusPct + defEff.wallDefPct
+    });
+    const win = result.winner === 'attacker';
+    const resultText = win
+      ? '攻陷「' + tile.name + '」，從 ' + D.factionDefById(prevOwnerFactionId).name + ' 手中奪下此城，即刻起可派駐部隊、開始建設。'
+      : '進攻「' + tile.name + '」失利，部隊損失慘重，暫時撤退。';
+    return {
+      kind: 'city', attackerFactionId: playerState.factionId, defenderFactionId: prevOwnerFactionId,
+      targetName: tile.name, purpose: army.purpose,
+      title: '進攻「' + tile.name + '」', attackerHeroStateId: army.heroStateId, attackerUnitsBefore,
+      defenderHeroStateId, defenderUnitsBefore: defUnits, defenderName: D.factionDefById(prevOwnerFactionId).name + ' 守軍',
+      timeline: result.timeline, win, resultText, result
+    };
+  }
+
+  function engageMonsterBattle(playerState, army, tile, eff, attackerUnitsBefore) {
+    const defenderUnitsBefore = guardDisplayUnits(tile.guardPower);
+    const result = resolveBattle({
+      attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerEff: eff, attackerPlayerState: playerState,
+      defenderStaticGuard: tile.guardPower
+    });
+    const win = result.winner === 'attacker';
+    let resultText = win ? '擊破' + tile.name + '守軍，獲得豐厚資源。' : '進攻' + tile.name + '失利，部隊損失慘重，暫時撤退。';
+    let itemDropId = null;
+    if (win && Math.random() < 0.3) {
+      const dropPool = D.ITEM_DEFS.filter((it) => it.tier <= 3);
+      const dropped = U.choice(dropPool);
+      itemDropId = dropped.id;
+      resultText += ' 並拾獲「' + dropped.name + '」。';
+    }
+    return {
+      kind: 'monster', attackerFactionId: playerState.factionId,
+      targetName: tile.name, purpose: army.purpose,
+      title: '討伐「' + tile.name + '」', attackerHeroStateId: army.heroStateId, attackerUnitsBefore,
+      defenderHeroStateId: null, defenderUnitsBefore, defenderName: tile.name,
+      timeline: result.timeline, win, resultText, result, itemDropId
+    };
   }
 
   /**
-   * 取得某地塊目前仍可觀戰的戰鬥回放資料，過期或不存在則回傳 null。
-   * @param {SaveGame} saveGame
-   * @param {string} tileId
-   * @param {number} now
-   * @returns {Object|null}
-   */
-  function mapBattleReplayAt(saveGame, tileId, now) {
-    if (!saveGame.mapBattles) saveGame.mapBattles = {};
-    const replay = saveGame.mapBattles[tileId];
-    if (!replay || now >= replay.expiresAt) return null;
-    return replay;
-  }
-
-  /**
-   * 部隊抵達行軍目標時的結算：敵方主城／產地／野怪營地三種分支。
+   * 部隊抵達行軍目標時觸發：判定目標是否還打得成，打得成的話就開一場「進行中」的
+   * 地圖戰鬥（見 beginMapBattle），實際傷亡／掠奪／佔領則交給時間到了之後的
+   * settleMapBattle 結算——打不成（目標消失、已是己方、據點冷卻中等）則跟以前
+   * 一樣立即折返，沒有「戰鬥」可言，不需要進行中狀態。
    * @param {SaveGame} saveGame
    * @param {PlayerState} playerState 出兵的一方。
    * @param {ArmyState} army
@@ -235,11 +346,13 @@
     const Army = window.Game.Systems.Army;
     const Econ = window.Game.Systems.Economy;
     const tile = saveGame.map.tiles[army.targetTileId];
-    const battle = { attackerFactionId: playerState.factionId, attackerArmyId: army.id, targetName: tile ? tile.name : '未知地點', purpose: army.purpose, time: now };
 
     if (!tile || (tile.type !== 'resource' && tile.type !== 'monster' && tile.type !== 'capital' && tile.type !== 'city')) {
       Army.startReturn(playerState, army, now);
-      playerState.battleLog.unshift(M.createBattleState(Object.assign(battle, { outcome: 'invalid', text: '目標已不存在，部隊折返。' })));
+      playerState.battleLog.unshift(M.createBattleState({
+        attackerFactionId: playerState.factionId, attackerArmyId: army.id, targetName: tile ? tile.name : '未知地點',
+        purpose: army.purpose, time: now, outcome: 'invalid', text: '目標已不存在，部隊折返。'
+      }));
       trimBattleLog(playerState);
       return;
     }
@@ -249,231 +362,164 @@
       return;
     }
 
-    const eff = Econ.computeEffects(playerState);
-    let result;
-
-    if (tile.type === 'capital') {
-      const defender = saveGame.players[tile.ownerFactionId];
-      const defEff = Econ.computeEffects(defender);
-      const garrison = Object.values(defender.armies).filter((a) => a.status === 'garrison');
-      const defUnits = U.sumDicts(garrison.map((a) => a.units));
-      const defenderHeroStateId = (garrison.find((a) => a.heroStateId) || {}).heroStateId || null;
-      const attackerUnitsBefore = Object.assign({}, army.units);
-      result = resolveBattle({
-        attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerEff: eff, attackerPlayerState: playerState,
-        defenderUnits: defUnits, defenderHeroStateId, defenderEff: defEff, defenderPlayerState: defender,
-        wallBonusPct: defEff.defenseBonusPct + defEff.wallDefPct
-      });
-      const { remaining, losses } = applyCasualties(army.units, result.attackerLossRate);
-      army.units = remaining;
-      if (result.winner === 'attacker') {
-        const plunderMul = 1 + (result.attackerLootBonusPct || 0) / 100;
-        const plunder = {};
-        D.RESOURCE_TYPES.forEach((r) => {
-          const take = Math.round((defender.resources[r] || 0) * 0.15 * plunderMul);
-          plunder[r] = take; defender.resources[r] -= take; playerState.resources[r] += take;
-        });
-        garrison.forEach((a) => { const c = applyCasualties(a.units, result.defenderLossRate); a.units = c.remaining; });
-        battle.outcome = 'win';
-        battle.text = '成功襲擾 ' + D.factionDefById(tile.ownerFactionId).name + ' 主城，掠奪資源並重創守軍。';
-        battle.loot = plunder;
-        if (army.heroStateId) window.Game.Systems.Hero.awardExp(playerState.heroes[army.heroStateId], 60);
-      } else {
-        battle.outcome = 'lose';
-        battle.text = '進攻 ' + D.factionDefById(tile.ownerFactionId).name + ' 主城失利，部隊損失慘重。';
-      }
-      battle.losses = losses;
-      recordMapBattleReplay(saveGame, tile.id, {
-        title: '襲擾「' + tile.name + '」',
-        attackerHeroStateId: army.heroStateId,
-        attackerUnitsBefore,
-        defenderHeroStateId,
-        defenderUnitsBefore: defUnits,
-        defenderName: D.factionDefById(tile.ownerFactionId).name + ' 守軍',
-        defenderFactionId: tile.ownerFactionId,
-        attackerFactionId: playerState.factionId,
-        timeline: result.timeline,
-        win: result.winner === 'attacker',
-        resultText: battle.text
-      }, now);
-    } else if (tile.type === 'resource' && tile.ownerFactionId) {
+    if (tile.type === 'resource' && tile.ownerFactionId) {
       Army.startReturn(playerState, army, now);
-      battle.outcome = 'invalid';
-      battle.text = tile.name + '已被佔領，部隊折返。';
-      playerState.battleLog.unshift(M.createBattleState(battle));
+      playerState.battleLog.unshift(M.createBattleState({
+        attackerFactionId: playerState.factionId, attackerArmyId: army.id, targetName: tile.name,
+        purpose: army.purpose, time: now, outcome: 'invalid', text: tile.name + '已被佔領，部隊折返。'
+      }));
       trimBattleLog(playerState);
       return;
-    } else if (tile.type === 'resource') {
-      const attackerUnitsBefore = Object.assign({}, army.units);
-      const defenderUnitsBefore = guardDisplayUnits(tile.guardPower);
-      result = resolveBattle({
-        attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerEff: eff, attackerPlayerState: playerState,
-        defenderStaticGuard: tile.guardPower
-      });
-      const { remaining, losses } = applyCasualties(army.units, result.attackerLossRate);
-      army.units = remaining;
-      battle.losses = losses;
-      if (result.winner === 'attacker') {
-        window.Game.Systems.Map.captureResourceTile(playerState, tile, result.attackerLootBonusPct, now);
-        battle.outcome = 'win';
-        battle.text = '攻佔' + tile.name + '，即刻起持續獲得每分鐘 ' + tile.yieldPerMin + ' ' + D.RESOURCE_NAMES[tile.resourceType] + '的固定產出。';
-        if (army.heroStateId) window.Game.Systems.Hero.awardExp(playerState.heroes[army.heroStateId], 30);
-      } else {
-        battle.outcome = 'lose';
-        battle.text = '進攻' + tile.name + '失利，部隊損失慘重，暫時撤退。';
-      }
-      recordMapBattleReplay(saveGame, tile.id, {
-        title: '進攻「' + tile.name + '」',
-        attackerHeroStateId: army.heroStateId,
-        attackerUnitsBefore,
-        defenderHeroStateId: null,
-        defenderUnitsBefore,
-        defenderName: tile.name + '守軍',
-        attackerFactionId: playerState.factionId,
-        timeline: result.timeline,
-        win: result.winner === 'attacker',
-        resultText: battle.text
-      }, now);
-    } else if (tile.type === 'city') {
-      const prevOwnerFactionId = tile.ownerFactionId;
-      if (prevOwnerFactionId) {
-        // 攻打其他勢力已收復／攻下的城池：比照攻打主城的方式，以對方全部駐守部隊合計為守軍。
-        const defender = saveGame.players[prevOwnerFactionId];
-        const defEff = Econ.computeEffects(defender);
-        const garrison = Object.values(defender.armies).filter((a) => a.status === 'garrison');
-        const defUnits = U.sumDicts(garrison.map((a) => a.units));
-        const defenderHeroStateId = (garrison.find((a) => a.heroStateId) || {}).heroStateId || null;
-        const attackerUnitsBefore = Object.assign({}, army.units);
-        result = resolveBattle({
-          attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerEff: eff, attackerPlayerState: playerState,
-          defenderUnits: defUnits, defenderHeroStateId, defenderEff: defEff, defenderPlayerState: defender,
-          wallBonusPct: defEff.defenseBonusPct + defEff.wallDefPct
-        });
-        const { remaining, losses } = applyCasualties(army.units, result.attackerLossRate);
-        army.units = remaining;
-        battle.losses = losses;
-        battle.defenderFactionId = prevOwnerFactionId;
-        if (result.winner === 'attacker') {
-          garrison.forEach((a) => { const c = applyCasualties(a.units, result.defenderLossRate); a.units = c.remaining; });
-          window.Game.Systems.Map.captureCityTile(saveGame, playerState, tile, now);
-          battle.outcome = 'win';
-          battle.text = '攻陷「' + tile.name + '」，從 ' + D.factionDefById(prevOwnerFactionId).name + ' 手中奪下此城，即刻起可派駐部隊、開始建設。';
-          if (army.heroStateId) window.Game.Systems.Hero.awardExp(playerState.heroes[army.heroStateId], 80);
-        } else {
-          battle.outcome = 'lose';
-          battle.text = '進攻「' + tile.name + '」失利，部隊損失慘重，暫時撤退。';
-        }
-        recordMapBattleReplay(saveGame, tile.id, {
-          title: '進攻「' + tile.name + '」',
-          attackerHeroStateId: army.heroStateId,
-          attackerUnitsBefore,
-          defenderHeroStateId,
-          defenderUnitsBefore: defUnits,
-          defenderName: D.factionDefById(prevOwnerFactionId).name + ' 守軍',
-          defenderFactionId: prevOwnerFactionId,
-          attackerFactionId: playerState.factionId,
-          timeline: result.timeline,
-          win: result.winner === 'attacker',
-          resultText: battle.text
-        }, now);
-      } else {
-        // 叛軍佔據，尚未被任何勢力收復。
-        const attackerUnitsBefore = Object.assign({}, army.units);
-        const defenderUnitsBefore = guardDisplayUnits(tile.guardPower);
-        result = resolveBattle({
-          attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerEff: eff, attackerPlayerState: playerState,
-          defenderStaticGuard: tile.guardPower
-        });
-        const { remaining, losses } = applyCasualties(army.units, result.attackerLossRate);
-        army.units = remaining;
-        battle.losses = losses;
-        if (result.winner === 'attacker') {
-          window.Game.Systems.Map.captureCityTile(saveGame, playerState, tile, now);
-          battle.outcome = 'win';
-          battle.text = '擊破叛軍，收復「' + tile.name + '」，即刻起可派駐部隊、開始建設。';
-          if (army.heroStateId) window.Game.Systems.Hero.awardExp(playerState.heroes[army.heroStateId], 50);
-        } else {
-          battle.outcome = 'lose';
-          battle.text = '進攻「' + tile.name + '」失利，部隊損失慘重，暫時撤退。';
-        }
-        recordMapBattleReplay(saveGame, tile.id, {
-          title: '進攻「' + tile.name + '」',
-          attackerHeroStateId: army.heroStateId,
-          attackerUnitsBefore,
-          defenderHeroStateId: null,
-          defenderUnitsBefore,
-          defenderName: '叛軍守備隊',
-          attackerFactionId: playerState.factionId,
-          timeline: result.timeline,
-          win: result.winner === 'attacker',
-          resultText: battle.text
-        }, now);
-      }
-    } else {
-      // monster：可重複刷，擊破後進入冷卻，而非永久佔領。
-      const attackerUnitsBefore = Object.assign({}, army.units);
-      const defenderUnitsBefore = guardDisplayUnits(tile.guardPower);
-      result = resolveBattle({
-        attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerEff: eff, attackerPlayerState: playerState,
-        defenderStaticGuard: tile.cooldownUntil > now ? 0 : tile.guardPower
-      });
-      if (tile.cooldownUntil > now) {
-        Army.startReturn(playerState, army, now);
-        battle.outcome = 'empty';
-        battle.text = '據點守軍尚未恢復，部隊撲空折返。';
-        playerState.battleLog.unshift(M.createBattleState(battle));
-        trimBattleLog(playerState);
-        return;
-      }
-      const { remaining, losses } = applyCasualties(army.units, result.attackerLossRate);
-      army.units = remaining;
-      battle.losses = losses;
-      if (result.winner === 'attacker') {
-        const lootMul = 1 + (result.attackerLootBonusPct || 0) / 100;
-        const lootBase = Math.round(tile.guardPower * 4 * lootMul);
-        const loot = {};
-        D.RESOURCE_TYPES.forEach((r) => {
-          const g = Math.round(lootBase / 4);
-          loot[r] = g;
-          playerState.resources[r] = U.clamp(playerState.resources[r] + g, 0, eff.storageCap[r]);
-        });
-        tile.cooldownUntil = now + 10 * 60000;
-        battle.outcome = 'win';
-        battle.text = '擊破' + tile.name + '守軍，獲得豐厚資源。';
-        battle.loot = loot;
-        if (army.heroStateId) window.Game.Systems.Hero.awardExp(playerState.heroes[army.heroStateId], 30);
-        if (Math.random() < 0.3) {
-          const dropPool = D.ITEM_DEFS.filter((it) => it.tier <= 3);
-          const dropped = U.choice(dropPool);
-          window.Game.Systems.Hero.grantItem(playerState, dropped.id, 1);
-          battle.itemDrop = dropped.name;
-          battle.text += ' 並拾獲「' + dropped.name + '」。';
-        }
-      } else {
-        battle.outcome = 'lose';
-        battle.text = '進攻' + tile.name + '失利，部隊損失慘重，暫時撤退。';
-      }
-      recordMapBattleReplay(saveGame, tile.id, {
-        title: '討伐「' + tile.name + '」',
-        attackerHeroStateId: army.heroStateId,
-        attackerUnitsBefore,
-        defenderHeroStateId: null,
-        defenderUnitsBefore,
-        defenderName: tile.name,
-        attackerFactionId: playerState.factionId,
-        timeline: result.timeline,
-        win: result.winner === 'attacker',
-        resultText: battle.text
-      }, now);
     }
 
-    Army.startReturn(playerState, army, now);
-    playerState.battleLog.unshift(M.createBattleState(battle));
+    if (tile.type === 'monster' && tile.cooldownUntil > now) {
+      Army.startReturn(playerState, army, now);
+      playerState.battleLog.unshift(M.createBattleState({
+        attackerFactionId: playerState.factionId, attackerArmyId: army.id, targetName: tile.name,
+        purpose: army.purpose, time: now, outcome: 'empty', text: '據點守軍尚未恢復，部隊撲空折返。'
+      }));
+      trimBattleLog(playerState);
+      return;
+    }
+
+    const eff = Econ.computeEffects(playerState);
+    const attackerUnitsBefore = Object.assign({}, army.units);
+    let engagement;
+    if (tile.type === 'capital') engagement = engageCapitalBattle(saveGame, playerState, army, tile, eff, attackerUnitsBefore);
+    else if (tile.type === 'resource') engagement = engageResourceBattle(playerState, army, tile, eff, attackerUnitsBefore);
+    else if (tile.type === 'city') engagement = engageCityBattle(saveGame, playerState, army, tile, eff, attackerUnitsBefore);
+    else engagement = engageMonsterBattle(playerState, army, tile, eff, attackerUnitsBefore);
+
+    beginMapBattle(saveGame, tile, army, engagement, now);
+  }
+
+  function finishBattle(playerState, army, battle, now) {
+    window.Game.Systems.Army.startReturn(playerState, army, now);
+    playerState.battleLog.unshift(window.Game.Models.createBattleState(battle));
     trimBattleLog(playerState);
+  }
+
+  function settleCapitalBattle(saveGame, rec, now) {
+    const attackerState = saveGame.players[rec.attackerFactionId];
+    const army = attackerState.armies[rec.armyId];
+    const defender = saveGame.players[rec.defenderFactionId];
+    const { remaining, losses } = applyCasualties(army.units, rec.result.attackerLossRate);
+    army.units = remaining;
+    const battle = {
+      attackerFactionId: rec.attackerFactionId, attackerArmyId: rec.armyId, targetName: rec.targetName,
+      purpose: rec.purpose, time: now, losses, text: rec.resultText
+    };
+    if (rec.win) {
+      const plunderMul = 1 + (rec.result.attackerLootBonusPct || 0) / 100;
+      const plunder = {};
+      D.RESOURCE_TYPES.forEach((r) => {
+        const take = Math.round((defender.resources[r] || 0) * 0.15 * plunderMul);
+        plunder[r] = take; defender.resources[r] -= take; attackerState.resources[r] += take;
+      });
+      const garrison = Object.values(defender.armies).filter((a) => a.status === 'garrison');
+      garrison.forEach((a) => { const c = applyCasualties(a.units, rec.result.defenderLossRate); a.units = c.remaining; });
+      battle.outcome = 'win';
+      battle.loot = plunder;
+      if (army.heroStateId) window.Game.Systems.Hero.awardExp(attackerState.heroes[army.heroStateId], 60);
+    } else {
+      battle.outcome = 'lose';
+    }
+    finishBattle(attackerState, army, battle, now);
+  }
+
+  function settleResourceBattle(saveGame, rec, now) {
+    const attackerState = saveGame.players[rec.attackerFactionId];
+    const army = attackerState.armies[rec.armyId];
+    const tile = saveGame.map.tiles[rec.tileId];
+    const { remaining, losses } = applyCasualties(army.units, rec.result.attackerLossRate);
+    army.units = remaining;
+    const battle = {
+      attackerFactionId: rec.attackerFactionId, attackerArmyId: rec.armyId, targetName: rec.targetName,
+      purpose: rec.purpose, time: now, losses, text: rec.resultText
+    };
+    if (rec.win && tile) {
+      window.Game.Systems.Map.captureResourceTile(attackerState, tile, rec.result.attackerLootBonusPct, now);
+      battle.outcome = 'win';
+      if (army.heroStateId) window.Game.Systems.Hero.awardExp(attackerState.heroes[army.heroStateId], 30);
+    } else {
+      battle.outcome = 'lose';
+    }
+    finishBattle(attackerState, army, battle, now);
+  }
+
+  function settleCityBattle(saveGame, rec, now) {
+    const attackerState = saveGame.players[rec.attackerFactionId];
+    const army = attackerState.armies[rec.armyId];
+    const tile = saveGame.map.tiles[rec.tileId];
+    const { remaining, losses } = applyCasualties(army.units, rec.result.attackerLossRate);
+    army.units = remaining;
+    const battle = {
+      attackerFactionId: rec.attackerFactionId, attackerArmyId: rec.armyId, targetName: rec.targetName,
+      purpose: rec.purpose, time: now, losses, text: rec.resultText
+    };
+    if (rec.defenderFactionId) battle.defenderFactionId = rec.defenderFactionId;
+    if (rec.win && tile) {
+      if (rec.defenderFactionId) {
+        const defender = saveGame.players[rec.defenderFactionId];
+        const garrison = Object.values(defender.armies).filter((a) => a.status === 'garrison');
+        garrison.forEach((a) => { const c = applyCasualties(a.units, rec.result.defenderLossRate); a.units = c.remaining; });
+      }
+      window.Game.Systems.Map.captureCityTile(saveGame, attackerState, tile, now);
+      battle.outcome = 'win';
+      if (army.heroStateId) window.Game.Systems.Hero.awardExp(attackerState.heroes[army.heroStateId], rec.defenderFactionId ? 80 : 50);
+    } else {
+      battle.outcome = 'lose';
+    }
+    finishBattle(attackerState, army, battle, now);
+  }
+
+  function settleMonsterBattle(saveGame, rec, now) {
+    const attackerState = saveGame.players[rec.attackerFactionId];
+    const army = attackerState.armies[rec.armyId];
+    const tile = saveGame.map.tiles[rec.tileId];
+    const { remaining, losses } = applyCasualties(army.units, rec.result.attackerLossRate);
+    army.units = remaining;
+    const battle = {
+      attackerFactionId: rec.attackerFactionId, attackerArmyId: rec.armyId, targetName: rec.targetName,
+      purpose: rec.purpose, time: now, losses, text: rec.resultText
+    };
+    if (rec.win && tile) {
+      const eff = window.Game.Systems.Economy.computeEffects(attackerState);
+      const lootMul = 1 + (rec.result.attackerLootBonusPct || 0) / 100;
+      const lootBase = Math.round(tile.guardPower * 4 * lootMul);
+      const loot = {};
+      D.RESOURCE_TYPES.forEach((r) => {
+        const g = Math.round(lootBase / 4);
+        loot[r] = g;
+        attackerState.resources[r] = U.clamp(attackerState.resources[r] + g, 0, eff.storageCap[r]);
+      });
+      tile.cooldownUntil = now + 10 * 60000;
+      battle.outcome = 'win';
+      battle.loot = loot;
+      if (rec.itemDropId) { window.Game.Systems.Hero.grantItem(attackerState, rec.itemDropId, 1); battle.itemDrop = D.itemDefById(rec.itemDropId).name; }
+      if (army.heroStateId) window.Game.Systems.Hero.awardExp(attackerState.heroes[army.heroStateId], 30);
+    } else {
+      battle.outcome = 'lose';
+    }
+    finishBattle(attackerState, army, battle, now);
+  }
+
+  /** 時間到了的進行中地圖戰鬥，逐一真正結算（傷亡／掠奪／佔領）並從 activeBattles 移除。 */
+  function resolveActiveBattles(saveGame, now) {
+    if (!saveGame.activeBattles) { saveGame.activeBattles = {}; return; }
+    Object.keys(saveGame.activeBattles).forEach((tileId) => {
+      const rec = saveGame.activeBattles[tileId];
+      if (now < rec.endAt) return;
+      if (rec.kind === 'capital') settleCapitalBattle(saveGame, rec, now);
+      else if (rec.kind === 'resource') settleResourceBattle(saveGame, rec, now);
+      else if (rec.kind === 'city') settleCityBattle(saveGame, rec, now);
+      else settleMonsterBattle(saveGame, rec, now);
+      delete saveGame.activeBattles[tileId];
+    });
   }
 
   window.Game.Systems.Combat = {
     emptyCombatBonus, combatBonusFor, sideCombatStats, resolveBattle, applyCasualties,
-    resolveArmyArrival, trimBattleLog, recordMapBattleReplay, mapBattleReplayAt
+    resolveArmyArrival, resolveActiveBattles, activeBattleAt, trimBattleLog
   };
 })();
