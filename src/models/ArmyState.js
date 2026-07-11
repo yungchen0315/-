@@ -17,7 +17,10 @@
    * @property {string} id
    * @property {string} ownerFactionId
    * @property {string} name 顯示名稱。
-   * @property {string|null} heroStateId 領軍武將的 HeroState id（同一武將 id），沒有則為 null。
+   * @property {string|null} heroStateId 主將的 HeroState id（同一武將 id），沒有則為 null。
+   * @property {string[]} subHeroStateIds 副將的 HeroState id 陣列（最多 2 名，率土之濱式
+   *   一隊 1 主將＋2 副將的編隊）。戰鬥時全隊武將的技能效果會一起疊加、統率上限相加，
+   *   主將對戰力貢獻最大、副將以較低權重加成。沒有副將時為空陣列。
    * @property {Object<string,number>} units 兵種組成，key 為 UnitDef id。
    * @property {ArmyStatus} status
    * @property {number} departAt 本次行軍/返程出發時間（epoch ms），status 為 garrison 時無意義。
@@ -39,6 +42,7 @@
       ownerFactionId,
       name,
       heroStateId: null,
+      subHeroStateIds: [],
       units: units || {},
       status: 'garrison',
       departAt: 0,

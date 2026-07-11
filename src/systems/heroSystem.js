@@ -76,38 +76,85 @@
     playerState.inventory[itemDefId] = (playerState.inventory[itemDefId] || 0) + (qty || 1);
   }
 
+  /* ------------------------------------------------------------------------
+   * 編隊：一隊最多 1 主將 ＋ SQUAD_SUB_MAX 名副將（率土之濱式的多武將編隊）。
+   * 全隊武將的技能效果在戰鬥時一起疊加、統率上限相加（副將愈多能帶愈多兵），
+   * 實際戰力計算在 combatSystem。
+   * ------------------------------------------------------------------------ */
+  const SQUAD_SUB_MAX = 2;
+
+  /** 一支部隊目前的全部武將 id（主將在前、副將在後），過濾掉空缺。 */
+  function squadHeroIds(army) {
+    return [army.heroStateId].concat(army.subHeroStateIds || []).filter(Boolean);
+  }
+
+  /** 一支部隊的統率上限＝隊上所有武將統率上限之和（副將愈多，可帶兵力愈高）。 */
+  function armyLeadershipCap(playerState, army) {
+    return squadHeroIds(army).reduce((sum, id) => {
+      const hs = playerState.heroes[id];
+      return sum + (hs ? leadershipCap(hs) : 0);
+    }, 0);
+  }
+
+  /** 把某武將從牠目前所在的任何一支部隊（不論主將或副將）先卸下來，確保一名武將只在一隊。 */
+  function detachHeroEverywhere(playerState, heroDataId) {
+    Object.values(playerState.armies).forEach((a) => {
+      if (a.heroStateId === heroDataId) a.heroStateId = null;
+      if (Array.isArray(a.subHeroStateIds)) a.subHeroStateIds = a.subHeroStateIds.filter((id) => id !== heroDataId);
+    });
+    const hs = playerState.heroes[heroDataId];
+    if (hs) hs.assignedArmyId = null;
+  }
+
   /**
-   * 指派武將領軍，強制統率上限：部隊目前的統率需求（armySystem.leadershipUsed）
-   * 不能超過武將的統率上限。
+   * 指派武將入隊：隊上沒有主將時成為主將，否則補為副將（副將額滿則失敗）。
+   * 統率上限採全隊相加，因此加入武將只會提高上限、不會讓既有兵力超載。
    */
   function assignHeroToArmy(playerState, heroDataId, army) {
     const heroState = playerState.heroes[heroDataId];
     if (!heroState) return { ok: false, reason: '找不到武將' };
-    if (army.status !== 'garrison') return { ok: false, reason: '部隊行軍中，無法更換主將' };
-    const cap = leadershipCap(heroState);
-    const used = window.Game.Systems.Army.leadershipUsed(army);
-    if (used > cap) {
-      return { ok: false, reason: D.heroDefById(heroDataId).name + '統率上限為 ' + cap + '，此部隊統率需求為 ' + used + '，請先精簡兵力' };
+    if (army.status !== 'garrison') return { ok: false, reason: '部隊行軍中，無法調整編隊' };
+    if (!Array.isArray(army.subHeroStateIds)) army.subHeroStateIds = [];
+    if (army.heroStateId === heroDataId || army.subHeroStateIds.indexOf(heroDataId) >= 0) return { ok: true };
+    if (army.heroStateId && army.subHeroStateIds.length >= SQUAD_SUB_MAX) {
+      return { ok: false, reason: '編隊已滿（最多 1 主將 ＋ ' + SQUAD_SUB_MAX + ' 副將）' };
     }
-    Object.values(playerState.armies).forEach((a) => { if (a.heroStateId === heroDataId) a.heroStateId = null; });
-    Object.values(playerState.heroes).forEach((h) => { if (h.assignedArmyId === army.id) h.assignedArmyId = null; });
-    army.heroStateId = heroDataId;
+    detachHeroEverywhere(playerState, heroDataId);
+    if (!army.heroStateId) army.heroStateId = heroDataId;
+    else army.subHeroStateIds.push(heroDataId);
     heroState.assignedArmyId = army.id;
     return { ok: true };
   }
 
-  function unassignHero(playerState, army) {
-    if (army.heroStateId) {
-      const heroState = playerState.heroes[army.heroStateId];
-      if (heroState) heroState.assignedArmyId = null;
+  /** 把單一武將移出部隊；若移除的是主將，則由第一名副將遞補為主將。 */
+  function removeHeroFromArmy(playerState, army, heroDataId) {
+    if (army.status !== 'garrison') return { ok: false, reason: '部隊行軍中，無法調整編隊' };
+    if (!Array.isArray(army.subHeroStateIds)) army.subHeroStateIds = [];
+    if (army.heroStateId === heroDataId) {
+      army.heroStateId = army.subHeroStateIds.shift() || null;
+    } else {
+      army.subHeroStateIds = army.subHeroStateIds.filter((id) => id !== heroDataId);
     }
+    const hs = playerState.heroes[heroDataId];
+    if (hs) hs.assignedArmyId = null;
+    return { ok: true };
+  }
+
+  /** 解散整隊武將（主將＋全部副將都卸下），供解散部隊等情境使用。 */
+  function unassignHero(playerState, army) {
+    squadHeroIds(army).forEach((id) => {
+      const hs = playerState.heroes[id];
+      if (hs) hs.assignedArmyId = null;
+    });
     army.heroStateId = null;
+    army.subHeroStateIds = [];
     return { ok: true };
   }
 
   window.Game.Systems.Hero = {
+    SQUAD_SUB_MAX,
     expNeededForLevel, effectiveStats, leadershipCap, awardExp,
     ownedHeroDataIds, unlockHeroFromMission, equipItem, unequipItem, grantItem,
-    assignHeroToArmy, unassignHero
+    squadHeroIds, armyLeadershipCap, assignHeroToArmy, removeHeroFromArmy, unassignHero
   };
 })();

@@ -57,8 +57,19 @@
   function startWithSave() {
     const restored = window.Game.Systems.Save.loadFromLocalStorage();
     window.GameSave = restored || window.Game.Systems.NewGame.createNewGame();
+    normalizeSave(window.GameSave);
     window.Game.Systems.GameLoop.advanceTime(window.GameSave, U.now());
     afterReady();
+  }
+
+  // 舊存檔相容：補上後來才加入的欄位，讓載入舊進度時不會因為缺欄位而出錯。
+  function normalizeSave(saveGame) {
+    Object.values(saveGame.players || {}).forEach((p) => {
+      Object.values(p.armies || {}).forEach((army) => {
+        if (!Array.isArray(army.subHeroStateIds)) army.subHeroStateIds = [];
+      });
+    });
+    if (!saveGame.activeBattles) saveGame.activeBattles = {};
   }
 
   function startFresh(factionId) {
