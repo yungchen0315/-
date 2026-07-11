@@ -1,6 +1,6 @@
 /* ============================================================================
  * mapScreen.js — 「地圖」分頁：觸控地圖（單指拖曳平移／單指輕點選取）、
- * 勢力主城、產地、野怪營地。對應舊版 js/map.js。
+ * 各勢力首都／城池、產地、野怪營地。對應舊版 js/map.js。
  * ==========================================================================*/
 
 (function () {
@@ -115,45 +115,80 @@
     View.camY = clampCamY(cap.y * View.tilePx - View.canvas.height / 2);
   }
 
-  const TILE_COLORS = { empty: '#4a7a4f', capital: '#8a5a2b', resource: '#3a6bb0', monster: '#8a2b2b' };
+  /* ------------------------------------------------------------------------
+   * 地形視覺：以格座標做確定性 hash（同一格每次畫出來的紋理都一樣，不需要
+   * 額外存進存檔），讓草地帶一點深淺變化與零星「灌木/土塊」斑點，取代原本
+   * 純色平塗的格子，看起來更接近率土之濱一類 SLG 的手繪古戰場地圖質感。
+   * ------------------------------------------------------------------------ */
+  function hashTile(x, y, salt) {
+    let h = (x * 374761393 + y * 668265263 + (salt || 0) * 2654435761) | 0;
+    h = (h ^ (h >>> 13)) * 1274126177;
+    h = h ^ (h >>> 16);
+    return ((h >>> 0) % 1000) / 1000;
+  }
+
+  const GRASS_SHADES = ['#3f6b45', '#456f4a', '#3a6440', '#4a7550'];
+  const REGION_TINT = { shu: '#3aa15c', wei: '#3a6bb0', wu: '#c0392b' };
+
+  function drawTerrain(ctx, tile, sx, sy, size) {
+    const shadeIdx = Math.floor(hashTile(tile.x, tile.y, 1) * GRASS_SHADES.length);
+    ctx.fillStyle = GRASS_SHADES[shadeIdx];
+    ctx.fillRect(sx, sy, size, size);
+    // 淡淡的勢力區域色調，讓玩家一眼看出地圖上哪一塊大致是哪個勢力的地盤。
+    if (tile.regionFactionId && REGION_TINT[tile.regionFactionId]) {
+      ctx.globalAlpha = 0.14;
+      ctx.fillStyle = REGION_TINT[tile.regionFactionId];
+      ctx.fillRect(sx, sy, size, size);
+      ctx.globalAlpha = 1;
+    }
+    // 零星斑點，增加手繪紋理感。
+    const speckRoll = hashTile(tile.x, tile.y, 2);
+    if (speckRoll < 0.35) {
+      ctx.fillStyle = 'rgba(0,0,0,0.08)';
+      const px = sx + size * (0.2 + hashTile(tile.x, tile.y, 3) * 0.5);
+      const py = sy + size * (0.2 + hashTile(tile.x, tile.y, 4) * 0.5);
+      ctx.beginPath();
+      ctx.arc(px, py, size * 0.06, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
 
   function draw() {
     const saveGame = window.GameSave;
     if (!saveGame || !View.ctx) return;
     const ctx = View.ctx, canvas = View.canvas;
-    ctx.fillStyle = '#1b2a1e';
+    ctx.fillStyle = '#141f16';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     const startTx = Math.floor(View.camX / View.tilePx), startTy = Math.floor(View.camY / View.tilePx);
     const endTx = Math.ceil((View.camX + canvas.width) / View.tilePx), endTy = Math.ceil((View.camY + canvas.height) / View.tilePx);
+    const size = View.tilePx;
 
     for (let ty = Math.max(0, startTy); ty <= Math.min(D.MAP_CONFIG.height - 1, endTy); ty++) {
       for (let tx = Math.max(0, startTx); tx <= Math.min(D.MAP_CONFIG.width - 1, endTx); tx++) {
         const tile = window.Game.Systems.Map.tileAt(saveGame.map, tx, ty);
         const sx = tx * View.tilePx - View.camX, sy = ty * View.tilePx - View.camY;
-        ctx.fillStyle = TILE_COLORS[tile.type] || TILE_COLORS.empty;
-        ctx.fillRect(sx, sy, View.tilePx - 1, View.tilePx - 1);
+        drawTerrain(ctx, tile, sx, sy, size - 1);
+        ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(sx + 0.5, sy + 0.5, size - 2, size - 2);
 
         if (tile.type === 'capital') {
-          ctx.fillStyle = D.factionDefById(tile.ownerFactionId).color;
-          ctx.beginPath();
-          ctx.arc(sx + View.tilePx / 2, sy + View.tilePx / 2, View.tilePx * 0.32, 0, Math.PI * 2);
-          ctx.fill();
+          drawCapital(ctx, tile, sx, sy, size);
+        } else if (tile.type === 'city') {
+          drawCity(ctx, tile, sx, sy, size);
         } else if (tile.type === 'resource') {
-          if (tile.ownerFactionId) {
-            ctx.strokeStyle = D.factionDefById(tile.ownerFactionId).color;
-            ctx.lineWidth = 3;
-            ctx.strokeRect(sx + 2, sy + 2, View.tilePx - 5, View.tilePx - 5);
-          }
-          drawGlyph(ctx, D.RESOURCE_ICONS[tile.resourceType], sx, sy, 0.4);
+          drawResource(ctx, tile, sx, sy, size);
         } else if (tile.type === 'monster') {
-          drawGlyph(ctx, '⚔', sx, sy, 0.45);
+          ctx.fillStyle = 'rgba(138,43,43,0.35)';
+          ctx.fillRect(sx + 1, sy + 1, size - 3, size - 3);
+          drawGlyph(ctx, '⚔', sx, sy, 0.42, '#ffd9d9');
         }
 
         if (View.selectedTile && View.selectedTile.x === tx && View.selectedTile.y === ty) {
           ctx.strokeStyle = '#ffe08a';
           ctx.lineWidth = 3;
-          ctx.strokeRect(sx + 1, sy + 1, View.tilePx - 3, View.tilePx - 3);
+          ctx.strokeRect(sx + 1, sy + 1, size - 3, size - 3);
         }
       }
     }
@@ -181,8 +216,64 @@
     });
   }
 
-  function drawGlyph(ctx, glyph, sx, sy, sizeRatio) {
-    ctx.fillStyle = '#fff';
+  function drawCapital(ctx, tile, sx, sy, size) {
+    const color = D.factionDefById(tile.ownerFactionId).color;
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillRect(sx + 2, sy + 2, size - 5, size - 5);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(sx + size / 2, sy + size / 2, size * 0.36, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#e0b25a';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    drawGlyph(ctx, '🏯', sx, sy, 0.46, '#fff');
+    drawLabel(ctx, tile.name, sx, sy, size, '#ffe08a');
+  }
+
+  function drawCity(ctx, tile, sx, sy, size) {
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.fillRect(sx + 3, sy + 3, size - 7, size - 7);
+    if (tile.ownerFactionId) {
+      ctx.strokeStyle = D.factionDefById(tile.ownerFactionId).color;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(sx + 3, sy + 3, size - 7, size - 7);
+      drawGlyph(ctx, '🏰', sx, sy, 0.4, '#fff');
+    } else {
+      ctx.strokeStyle = '#8a8070';
+      ctx.setLineDash([3, 2]);
+      ctx.lineWidth = 2;
+      ctx.strokeRect(sx + 3, sy + 3, size - 7, size - 7);
+      ctx.setLineDash([]);
+      drawGlyph(ctx, '🚩', sx, sy, 0.38, '#d8d0b8');
+    }
+    drawLabel(ctx, tile.name, sx, sy, size, tile.ownerFactionId ? '#fff' : '#c9c0a8');
+  }
+
+  function drawResource(ctx, tile, sx, sy, size) {
+    ctx.fillStyle = 'rgba(58,107,176,0.22)';
+    ctx.fillRect(sx + 3, sy + 3, size - 7, size - 7);
+    if (tile.ownerFactionId) {
+      ctx.strokeStyle = D.factionDefById(tile.ownerFactionId).color;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(sx + 2, sy + 2, size - 5, size - 5);
+    }
+    drawGlyph(ctx, D.RESOURCE_ICONS[tile.resourceType], sx, sy, 0.4, '#fff');
+  }
+
+  function drawLabel(ctx, text, sx, sy, size, color) {
+    if (!text || size < 28) return;
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(sx, sy + size - 13, size, 13);
+    ctx.fillStyle = color || '#fff';
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, sx + size / 2, sy + size - 6, size - 2);
+  }
+
+  function drawGlyph(ctx, glyph, sx, sy, sizeRatio, color) {
+    ctx.fillStyle = color || '#fff';
     ctx.font = (View.tilePx * sizeRatio) + 'px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -202,7 +293,17 @@
 
     if (tile.type === 'capital') {
       panel.appendChild(U.el('div', 'subHint', D.factionDefById(tile.ownerFactionId).desc));
-      if (tile.ownerFactionId === playerState.factionId) { panel.appendChild(U.el('div', 'subHint', '這是你的主城。')); return; }
+      if (tile.ownerFactionId === playerState.factionId) { panel.appendChild(U.el('div', 'subHint', '這是你的首都。')); return; }
+    } else if (tile.type === 'city') {
+      if (tile.ownerFactionId === playerState.factionId) {
+        panel.appendChild(U.el('div', 'subHint', '已收復，屬於你的城池，可在「城池」分頁選擇此城管理建設。'));
+        return;
+      }
+      if (tile.ownerFactionId) {
+        panel.appendChild(U.el('div', 'subHint', '已被 ' + D.factionDefById(tile.ownerFactionId).name + ' 佔領，攻下後即可收為己有。'));
+      } else {
+        panel.appendChild(U.el('div', 'subHint', '仍由叛軍佔據，守備力：約 ' + tile.guardPower + '。擊破後即可收復，成為你的城池。'));
+      }
     } else if (tile.type === 'resource') {
       panel.appendChild(U.el('div', 'subHint', '每分鐘產量：' + D.RESOURCE_ICONS[tile.resourceType] + tile.yieldPerMin + ' ' + D.RESOURCE_NAMES[tile.resourceType]));
       if (tile.ownerFactionId) {
@@ -222,7 +323,7 @@
       panel.appendChild(U.el('div', 'emptyHint', '目前沒有可派遣的駐守部隊。'));
       return;
     }
-    const purpose = tile.type === 'capital' ? 'attack' : 'raid';
+    const purpose = (tile.type === 'capital' || tile.type === 'city') ? 'attack' : 'raid';
     garrisonArmies.forEach((army) => {
       const row = U.el('div', 'exploreTargetRow');
       row.appendChild(U.el('span', '', army.name + '（' + window.Game.Systems.Army.unitCount(army) + ' 兵）'));

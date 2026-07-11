@@ -63,6 +63,7 @@
 
   function tryMarch(saveGame, playerState, now) {
     const Army = window.Game.Systems.Army;
+    const Econ = window.Game.Systems.Economy;
     const home = Object.values(playerState.armies).find((a) => a.status === 'garrison' && Army.unitCount(a) > 40);
     if (!home) return;
     if (Math.random() > 0.35) return;
@@ -77,10 +78,19 @@
       return d > 0 && d <= 6 && t.guardPower <= Army.unitCount(home) * 3;
     });
 
+    const myPower = Econ.computePower(playerState);
+    const cityCandidates = Object.values(saveGame.map.tiles).filter((t) => {
+      if (t.type !== 'city' || t.ownerFactionId === playerState.factionId) return false;
+      if (U.tileDistance(myTile, t) > 14) return false;
+      if (!t.ownerFactionId) return t.guardPower <= Army.unitCount(home) * 3; // 叛軍佔據，比照野外據點守備力判斷。
+      return myPower > Econ.computePower(saveGame.players[t.ownerFactionId]) * 1.3; // 攻打其他勢力的城池，需要戰力優勢。
+    });
+    // 優先收復自己本土仍被叛軍佔據的城池，其次才考慮野外據點或跨勢力擴張。
+    const ownRebelCities = cityCandidates.filter((t) => t.homeFactionId === playerState.factionId && !t.ownerFactionId);
+
     const player = Object.values(saveGame.players).find((p) => p.isHuman);
     if (player) {
-      const myPower = window.Game.Systems.Economy.computePower(playerState);
-      const playerPower = window.Game.Systems.Economy.computePower(player);
+      const playerPower = Econ.computePower(player);
       const canAttackPlayer = myPower > playerPower * 1.4 && Math.random() < 0.2;
       if (canAttackPlayer) {
         const playerCity = Army.primaryCity(player);
@@ -88,9 +98,13 @@
         return;
       }
     }
-    if (candidates.length === 0) return;
-    const target = U.choice(candidates);
-    Army.sendArmyToTile(playerState, home.id, { x: target.x, y: target.y }, 'raid', now);
+
+    let target = null, purpose = 'raid';
+    if (ownRebelCities.length && Math.random() < 0.7) { target = U.choice(ownRebelCities); purpose = 'attack'; }
+    else if (cityCandidates.length && Math.random() < 0.4) { target = U.choice(cityCandidates); purpose = 'attack'; }
+    else if (candidates.length) { target = U.choice(candidates); purpose = 'raid'; }
+    if (!target) return;
+    Army.sendArmyToTile(playerState, home.id, { x: target.x, y: target.y }, purpose, now);
   }
 
   window.Game.Systems.Ai = { tick };

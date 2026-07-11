@@ -28,7 +28,8 @@
     D.FACTION_DEFS.forEach((f) => {
       const playerState = saveGame.players[f.id];
       const spot = capitalByFaction[f.id];
-      const city = M.createCityState('city_' + f.id, f.id, f.name + '主城', spot.x, spot.y, now);
+      const capitalTile = window.Game.Systems.Map.tileAt(saveGame.map, spot.x, spot.y);
+      const city = M.createCityState('city_' + f.id, f.id, capitalTile.name, spot.x, spot.y, now);
       city.buildings.capital.level = 1;
       city.buildings.granary.level = 1;
       city.buildings.sawmill.level = 1;

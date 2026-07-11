@@ -8,14 +8,32 @@
   const U = window.Game.Utils;
   const Dlg = window.Game.UI.Dialog;
 
+  let selectedCityId = null;
+
+  function renderCitySwitcher(container, saveGame, playerState) {
+    const cityList = Object.values(playerState.cities);
+    if (cityList.length <= 1) return;
+    const row = U.el('div', 'citySwitchRow');
+    cityList.forEach((c) => {
+      const active = c.id === (selectedCityId || cityList[0].id);
+      const btn = U.el('button', 'citySwitchBtn' + (active ? ' citySwitchActive' : ''), c.name);
+      U.onTap(btn, () => { selectedCityId = c.id; render(container, saveGame, playerState); });
+      row.appendChild(btn);
+    });
+    container.appendChild(row);
+  }
+
   function render(container, saveGame, playerState) {
     U.clearNode(container);
-    const city = Object.values(playerState.cities)[0];
-    if (!city) { container.appendChild(U.el('div', 'emptyHint', '尚無城池')); return; }
+    if (Object.keys(playerState.cities).length === 0) { container.appendChild(U.el('div', 'emptyHint', '尚無城池')); return; }
+    if (!selectedCityId || !playerState.cities[selectedCityId]) selectedCityId = Object.values(playerState.cities)[0].id;
+    const city = playerState.cities[selectedCityId];
     const eff = window.Game.Systems.Economy.computeEffects(playerState);
 
+    renderCitySwitcher(container, saveGame, playerState);
+
     const summary = U.el('div', 'panel resourceSummary');
-    summary.appendChild(U.el('div', 'panelTitle', '主城總覽'));
+    summary.appendChild(U.el('div', 'panelTitle', '總覽（全部 ' + Object.keys(playerState.cities).length + ' 座城池合計）'));
     const rateRow = U.el('div', 'rateRow');
     rateRow.appendChild(U.el('span', 'rateItem', D.RESOURCE_ICONS.food + ' +' + Math.round(eff.foodPerHour) + '/時'));
     rateRow.appendChild(U.el('span', 'rateItem', D.RESOURCE_ICONS.wood + ' +' + Math.round(eff.woodPerHour) + '/時'));
@@ -52,6 +70,7 @@
       }
     });
 
+    container.appendChild(U.el('div', 'panelTitle citySectionTitle', '城池建設：' + city.name));
     const list = U.el('div', 'buildingList');
     D.BUILDING_ORDER.forEach((type) => {
       list.appendChild(buildingCard(container, saveGame, playerState, city, type));
@@ -150,8 +169,8 @@
   const TECH_CATEGORY_LABELS = { economy: '經濟', military: '軍事', city: '城防' };
 
   function renderResearchPanel(container, playerState) {
-    const city = Object.values(playerState.cities)[0];
-    if (city.buildings.academy.level <= 0) return;
+    const hasAcademy = Object.values(playerState.cities).some((c) => c.buildings.academy.level > 0);
+    if (!hasAcademy) return;
     const Tech = window.Game.Systems.Technology;
     const panel = U.el('div', 'panel');
     panel.appendChild(U.el('div', 'panelTitle', '學院科技研究'));

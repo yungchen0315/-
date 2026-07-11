@@ -9,7 +9,7 @@
 
 (function () {
   /**
-   * @typedef {'empty'|'capital'|'resource'|'monster'} TileType
+   * @typedef {'empty'|'capital'|'city'|'resource'|'monster'} TileType
    */
 
   /**
@@ -18,14 +18,21 @@
    * @property {number} x
    * @property {number} y
    * @property {TileType} type
-   * @property {string} [name] 顯示名稱（主城／產地／野怪營地都有）。
-   * @property {string} [ownerFactionId] type 為 'capital' 時必填；type 為 'resource' 時
-   *   在被佔領前為 undefined，佔領後設為佔領者的勢力 id（永久佔領，無需再駐守）。
+   * @property {string} [name] 顯示名稱（首都／城池／產地／野怪營地都有）。
+   * @property {string} [ownerFactionId] type 為 'capital' 時必填；type 為 'resource'／'city'
+   *   時在被佔領前為 null/undefined，佔領後設為佔領者的勢力 id（永久佔領，無需再駐守）。
+   * @property {string} [homeFactionId] type 為 'city' 時，此城池原屬於哪個勢力的本土
+   *   （純供地圖視覺分區與 AI 優先順序參考，不限制實際攻打順序）。
+   * @property {string} regionFactionId 全地圖每一格都有：離哪個勢力首都最近，
+   *   純供地圖視覺分區上色使用，不影響任何遊戲規則判斷。
+   * @property {string} [cityId] type 為 'city' 時，對應的 PlayerState.cities key，
+   *   在整場遊戲中固定不變（即使易主也不變），易主時會建立一份全新的 CityState。
    * @property {string} [resourceType] type 為 'resource' 時的資源種類。
    * @property {number} [yieldPerMin] type 為 'resource' 時，佔領後每分鐘的固定產出量。
-   * @property {number} [guardPower] type 為 'resource'／'monster' 時的守備力估算值。
+   * @property {number} [guardPower] type 為 'resource'／'monster'／未佔領的 'city' 時的
+   *   守備力估算值。
    * @property {number} [cooldownUntil] type 為 'monster' 時，擊破後的冷卻到期時間
-   *   （epoch ms）；產地不使用冷卻機制，改用永久佔領。
+   *   （epoch ms）；產地與城池不使用冷卻機制，改用永久佔領。
    */
 
   /**
