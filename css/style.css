@@ -153,6 +153,7 @@ button, .navBtn, select {
 .generalHead { display: flex; justify-content: space-between; align-items: center; }
 .generalName { font-weight: bold; font-size: 14px; }
 .generalLevel { color: #e0b25a; font-size: 12px; }
+.generalRarity { font-size: 12px; margin-top: 2px; letter-spacing: 1px; }
 .generalStats { font-size: 12px; color: #cfead0; margin: 4px 0; }
 .generalSkill { font-size: 12px; color: #f0d38a; margin-bottom: 4px; }
 .expBarWrap { height: 5px; background: rgba(0,0,0,0.3); border-radius: 3px; overflow: hidden; margin-bottom: 4px; }

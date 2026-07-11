@@ -8,6 +8,9 @@
   const U = window.Game.Utils;
   const Dlg = window.Game.UI.Dialog;
   const SLOT_LABELS = { weapon: '武器', armor: '甲冑', mount: '坐騎', accessory: '寶物' };
+  const RARITY_LABELS = { 2: '一般', 3: '精良', 4: '名將', 5: '絕世' };
+
+  function rarityStars(rarity) { return '★'.repeat(rarity) + '☆'.repeat(5 - rarity); }
 
   function render(container, saveGame, playerState) {
     U.clearNode(container);
@@ -28,6 +31,9 @@
       head.appendChild(U.el('span', 'generalName', def.name));
       head.appendChild(U.el('span', 'generalLevel', 'Lv.' + heroState.level));
       body.appendChild(head);
+      const rarityRow = U.el('div', 'generalRarity', rarityStars(def.rarity) + '　' + (RARITY_LABELS[def.rarity] || ''));
+      rarityRow.style.color = def.portraitColor;
+      body.appendChild(rarityRow);
       body.appendChild(U.el('div', 'generalStats', '武力 ' + stats.force + '　統率 ' + stats.cmd + '　智力 ' + stats.intel));
       body.appendChild(U.el('div', 'generalCap', '統率上限：可率領兵力總統率需求 ' + Hero.leadershipCap(heroState) + ' 以內'));
       body.appendChild(U.el('div', 'generalSkill', '【' + def.skill.name + '】' + def.skill.desc));
