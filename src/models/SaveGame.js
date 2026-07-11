@@ -18,6 +18,9 @@
    * @property {number} nextAiTickAt AI 勢力下一次決策排程的時間戳。
    * @property {string} activeScreenId 目前選中的畫面分頁 id（純 UI 狀態，但為了讓玩家
    *   下次開遊戲回到同一畫面，一併存進存檔）。
+   * @property {Object<string,Object>} mapBattles 以地圖 tile id（"x_y"）為 key，記錄該格
+   *   最近一次地圖戰鬥的「觀戰」回放資料（見 combatSystem.recordMapBattleReplay），
+   *   供玩家點選該格時顯示「觀戰」按鈕、重播戰鬥動畫。過期或不存在則視為沒有可觀戰的戰鬥。
    */
 
   /**
@@ -42,7 +45,8 @@
       map: window.Game.Models.createEmptyMapState(window.Game.Data.MAP_CONFIG.width, window.Game.Data.MAP_CONFIG.height),
       players,
       nextAiTickAt: now + 5 * 60000,
-      activeScreenId: 'city'
+      activeScreenId: 'city',
+      mapBattles: {}
     };
   }
 

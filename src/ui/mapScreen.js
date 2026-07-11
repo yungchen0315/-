@@ -291,6 +291,22 @@
 
     panel.appendChild(U.el('div', 'panelTitle', tile.name || '未知地點'));
 
+    // 地圖上的戰鬥平時不會顯示動畫，只有點進「剛好」有戰鬥發生過的地塊時，才會看到觀戰按鈕，
+    // 點擊後重播 combatSystem 記錄下來的那場戰鬥（見 recordMapBattleReplay）。
+    const replay = window.Game.Systems.Combat.mapBattleReplayAt(saveGame, tile.id, U.now());
+    if (replay) {
+      const spectateRow = U.el('div', 'exploreTargetRow');
+      spectateRow.appendChild(U.el('span', '', '此處剛發生戰鬥'));
+      const spectateBtn = U.el('button', 'smallBtn', '觀戰');
+      U.onTap(spectateBtn, () => {
+        const attackerState = saveGame.players[replay.attackerFactionId];
+        if (!attackerState) return;
+        window.Game.UI.BattleScreen.play(attackerState, replay, () => renderInfoPanel(saveGame, playerState));
+      });
+      spectateRow.appendChild(spectateBtn);
+      panel.appendChild(spectateRow);
+    }
+
     if (tile.type === 'capital') {
       panel.appendChild(U.el('div', 'subHint', D.factionDefById(tile.ownerFactionId).desc));
       if (tile.ownerFactionId === playerState.factionId) { panel.appendChild(U.el('div', 'subHint', '這是你的首都。')); return; }
