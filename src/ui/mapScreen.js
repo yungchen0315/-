@@ -104,7 +104,7 @@
     const tx = Math.floor(wx / View.tilePx), ty = Math.floor(wy / View.tilePx);
     if (tx < 0 || ty < 0 || tx >= D.MAP_CONFIG.width || ty >= D.MAP_CONFIG.height) return;
     View.selectedTile = { x: tx, y: ty };
-    renderInfoPanel(window.GameSave, window.GameSave.players.shu);
+    renderInfoPanel(window.GameSave, Object.values(window.GameSave.players).find((p) => p.isHuman));
     draw();
   }
 

@@ -7,12 +7,10 @@
 (function () {
   const D = window.Game.Data;
   const U = window.Game.Utils;
-  const AI_FACTION_IDS = ['wei', 'wu'];
 
   function tick(saveGame, now) {
-    AI_FACTION_IDS.forEach((factionId) => {
-      const playerState = saveGame.players[factionId];
-      if (playerState) runAiPlayer(saveGame, playerState, now);
+    Object.values(saveGame.players).forEach((playerState) => {
+      if (!playerState.isHuman) runAiPlayer(saveGame, playerState, now);
     });
   }
 
@@ -79,14 +77,16 @@
       return d > 0 && d <= 6 && t.guardPower <= Army.unitCount(home) * 3;
     });
 
-    const player = saveGame.players.shu;
-    const myPower = window.Game.Systems.Economy.computePower(playerState);
-    const playerPower = window.Game.Systems.Economy.computePower(player);
-    const canAttackPlayer = myPower > playerPower * 1.4 && Math.random() < 0.2;
-    if (canAttackPlayer) {
-      const playerCity = Army.primaryCity(player);
-      Army.sendArmyToTile(playerState, home.id, { x: playerCity.tileX, y: playerCity.tileY }, 'attack', now);
-      return;
+    const player = Object.values(saveGame.players).find((p) => p.isHuman);
+    if (player) {
+      const myPower = window.Game.Systems.Economy.computePower(playerState);
+      const playerPower = window.Game.Systems.Economy.computePower(player);
+      const canAttackPlayer = myPower > playerPower * 1.4 && Math.random() < 0.2;
+      if (canAttackPlayer) {
+        const playerCity = Army.primaryCity(player);
+        Army.sendArmyToTile(playerState, home.id, { x: playerCity.tileX, y: playerCity.tileY }, 'attack', now);
+        return;
+      }
     }
     if (candidates.length === 0) return;
     const target = U.choice(candidates);

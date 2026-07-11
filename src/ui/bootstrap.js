@@ -28,9 +28,29 @@
         const confirmed = await Dlg.showConfirm('已有存檔，開始新遊戲將會覆蓋現有進度，確定要繼續嗎？');
         if (!confirmed) return;
       }
-      overlay.classList.remove('activeOverlay');
-      window.Game.Systems.Save.deleteSave();
-      startFresh();
+      showFactionPicker();
+    });
+  }
+
+  function showFactionPicker() {
+    document.getElementById('setupStepMain').style.display = 'none';
+    const panel = document.getElementById('setupStepFaction');
+    panel.style.display = '';
+    const list = document.getElementById('factionPickList');
+    U.clearNode(list);
+    window.Game.Data.FACTION_DEFS.forEach((f) => {
+      const card = U.el('div', 'factionPickCard');
+      card.style.borderColor = f.color;
+      const name = U.el('div', 'factionPickName', f.name);
+      name.style.color = f.color;
+      card.appendChild(name);
+      card.appendChild(U.el('div', 'factionPickDesc', f.desc));
+      U.onTap(card, () => {
+        document.getElementById('setupOverlay').classList.remove('activeOverlay');
+        window.Game.Systems.Save.deleteSave();
+        startFresh(f.id);
+      });
+      list.appendChild(card);
     });
   }
 
@@ -41,8 +61,8 @@
     afterReady();
   }
 
-  function startFresh() {
-    window.GameSave = window.Game.Systems.NewGame.createNewGame();
+  function startFresh(factionId) {
+    window.GameSave = window.Game.Systems.NewGame.createNewGame(factionId);
     afterReady();
   }
 
@@ -56,7 +76,7 @@
     window.Game.Systems.Save.saveToLocalStorage(window.GameSave);
   }
 
-  function humanPlayer() { return window.GameSave.players.shu; }
+  function humanPlayer() { return Object.values(window.GameSave.players).find((p) => p.isHuman); }
 
   function switchScreen(name) {
     if (SCREENS.indexOf(name) < 0) return;

@@ -8,10 +8,20 @@
   const D = window.Game.Data;
   const M = window.Game.Models;
 
-  /** @returns {SaveGame} */
-  function createNewGame() {
+  /** 各勢力的起始武將，皆為該勢力的開國之主：蜀＝劉備、魏＝曹操、吳＝孫權。
+   * 趙雲改為酒館招募（抽獎）取得，不再是開局即送的固定武將。 */
+  const STARTER_HERO_BY_FACTION = { shu: 'liubei', wei: 'caocao', wu: 'sunquan' };
+
+  /**
+   * @param {string} [humanFactionId] 玩家選擇操控的勢力 id，預設 'shu'（相容舊行為）。
+   * @returns {SaveGame}
+   */
+  function createNewGame(humanFactionId) {
     const now = window.Game.Utils.now();
     const saveGame = M.createEmptySaveGame(now);
+
+    const humanId = D.factionDefById(humanFactionId) ? humanFactionId : 'shu';
+    D.FACTION_DEFS.forEach((f) => { saveGame.players[f.id].isHuman = (f.id === humanId); });
 
     const capitalByFaction = window.Game.Systems.Map.generateMap(saveGame.map, D.FACTION_DEFS);
 
@@ -27,14 +37,15 @@
       playerState.cities[city.id] = city;
     });
 
-    window.Game.Systems.Mission.refreshMissionStatuses(saveGame.players.shu);
+    const humanPlayer = saveGame.players[humanId];
+    window.Game.Systems.Mission.refreshMissionStatuses(humanPlayer);
 
-    const humanPlayer = saveGame.players.shu;
-    humanPlayer.heroes.zhaoyun = M.createHeroState('zhaoyun');
-    const starterArmy = M.createArmyState('shu', '主力部隊', { infantry: 10 });
-    starterArmy.heroStateId = 'zhaoyun';
+    const starterHeroId = STARTER_HERO_BY_FACTION[humanId];
+    humanPlayer.heroes[starterHeroId] = M.createHeroState(starterHeroId);
+    const starterArmy = M.createArmyState(humanId, '主力部隊', { infantry: 10 });
+    starterArmy.heroStateId = starterHeroId;
     humanPlayer.armies[starterArmy.id] = starterArmy;
-    humanPlayer.heroes.zhaoyun.assignedArmyId = starterArmy.id;
+    humanPlayer.heroes[starterHeroId].assignedArmyId = starterArmy.id;
 
     return saveGame;
   }

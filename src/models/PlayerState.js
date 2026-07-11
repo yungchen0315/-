@@ -60,7 +60,7 @@
     });
 
     const missions = {};
-    window.Game.Data.MISSION_DEFS.forEach((m) => {
+    window.Game.Data.missionDefsForFaction(factionId).forEach((m) => {
       missions[m.id] = window.Game.Models.createMissionState(m.id);
     });
 
