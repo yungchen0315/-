@@ -32,15 +32,17 @@
    * @property {HeroSkillDef} skill
    * @property {HeroSourceDef} source
    * @property {string} portraitColor 依稀有度決定的頭像框顏色，純視覺用。
+   * @property {'m'|'f'} gender 純視覺用，供立繪生成器決定髮型。
    */
 
-  function hero(id, name, factionId, rarity, force, cmd, intel, skillName, skillDesc, source) {
+  function hero(id, name, factionId, rarity, force, cmd, intel, skillName, skillDesc, source, gender) {
     return {
       id, name, factionId, rarity, source,
       baseStats: { force, cmd, intel },
       growth: +(0.9 + rarity * 0.12).toFixed(2),
       skill: { name: skillName, desc: skillDesc },
-      portraitColor: rarity >= 5 ? '#d4af37' : rarity === 4 ? '#a15ec5' : rarity === 3 ? '#3a6bb0' : '#7a7a7a'
+      portraitColor: rarity >= 5 ? '#d4af37' : rarity === 4 ? '#a15ec5' : rarity === 3 ? '#3a6bb0' : '#7a7a7a',
+      gender: gender || 'm'
     };
   }
 
@@ -76,7 +78,7 @@
     hero('lumeng', '呂蒙', 'wu', 4, 82, 85, 78, '奇襲荊州', '攻城戰中兵力損耗降低', { type: 'story', missionId: 'm10' }),
     hero('huanggai', '黃蓋', 'wu', 2, 79, 74, 55, '苦肉', '偽裝撤退後造成反擊傷害', { type: 'explore', tileTag: 'chibi' }),
     hero('lusu', '魯肅', 'wu', 3, 55, 80, 82, '聯盟', '與其他勢力交戰時減少資源損耗', { type: 'explore', tileTag: 'luyang' }),
-    hero('sunshangxiang', '孫尚香', 'wu', 3, 85, 76, 66, '弓馬嫻熟', '弓騎兵造成的傷害提升', { type: 'explore', tileTag: 'jianye' }),
+    hero('sunshangxiang', '孫尚香', 'wu', 3, 85, 76, 66, '弓馬嫻熟', '弓騎兵造成的傷害提升', { type: 'explore', tileTag: 'jianye' }, 'f'),
     hero('zhoutai', '周泰', 'wu', 2, 86, 70, 45, '捨身', '守護主將，承受本應由主將承受的傷害', { type: 'explore', tileTag: 'yuzhang' })
   ];
 
