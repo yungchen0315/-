@@ -39,10 +39,11 @@
     if (window.Game.Systems.Army.unitCount(army) === 0) return { ok: false, reason: '部隊沒有兵力' };
 
     missionState.attempts += 1;
+    const attackerUnitsBefore = Object.assign({}, army.units);
     const eff = window.Game.Systems.Economy.computeEffects(playerState);
     const result = window.Game.Systems.Combat.resolveBattle({
       attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerEff: eff, attackerPlayerState: playerState,
-      defenderUnits: mission.enemy.units, defenderHeroStateId: null, defenderEff: {}
+      defenderUnits: mission.enemy.units, defenderHeroStateId: mission.enemy.heroId, defenderEff: {}
     });
     const { remaining, losses } = window.Game.Systems.Combat.applyCasualties(army.units, result.attackerLossRate);
     army.units = remaining;
@@ -75,7 +76,14 @@
 
     playerState.battleLog.unshift(M.createBattleState(battle));
     window.Game.Systems.Combat.trimBattleLog(playerState);
-    return { ok: true, win, battle };
+    return {
+      ok: true, win, battle, result,
+      attackerHeroStateId: army.heroStateId,
+      attackerUnitsBefore,
+      defenderName: mission.enemy.name,
+      defenderHeroStateId: mission.enemy.heroId,
+      defenderUnitsBefore: mission.enemy.units
+    };
   }
 
   window.Game.Systems.Mission = { refreshMissionStatuses, unlockedMissions, fightMission };

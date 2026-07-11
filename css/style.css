@@ -179,6 +179,7 @@ button, .navBtn, select {
 .trainUnitRow.locked { opacity: 0.5; }
 .unitIcon { font-size: 16px; }
 .unitName { flex: 0 0 auto; min-width: 46px; }
+.unitStats { flex: 0 0 auto; color: #9fd18a; font-size: 11px; }
 .unitCost { flex: 1 1 auto; color: #bcae8f; font-size: 11px; }
 .lockedHint { font-size: 11px; color: #8a8070; }
 .armyCard {
@@ -366,3 +367,74 @@ button, .navBtn, select {
 .gachaResultName { font-size: 11px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gachaResultDup { font-size: 10px; color: #bcae8f; }
 .gachaResultCloseBtn { width: 100%; }
+
+/* ---------------------------------------------------------------------- */
+/* 回合制戰鬥動畫                                                            */
+/* ---------------------------------------------------------------------- */
+.battleOverlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 300;
+  display: flex; align-items: center; justify-content: center;
+  padding: 14px;
+}
+.battleBox {
+  background: linear-gradient(180deg, #241b12, #14100b);
+  border: 1px solid #4a3620;
+  border-radius: 12px;
+  padding: 14px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 100%;
+  overflow-y: auto;
+  position: relative;
+}
+.battleHeader { text-align: center; margin-bottom: 10px; }
+.battleTitle { font-size: 15px; font-weight: bold; color: #e0b25a; letter-spacing: 2px; }
+.battleVsRow { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
+.battleSideCard { flex: 1 1 0; text-align: center; min-width: 0; }
+.battleSideCardRight { text-align: center; }
+.battleSidePortrait { width: 64px; margin: 0 auto; }
+.battleSidePortraitFlip .heroPortraitSvg { transform: scaleX(-1); }
+.battleSideName { font-size: 12px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.battleHpBarWrap { height: 6px; background: rgba(0,0,0,0.4); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+.battleHpBar { height: 100%; width: 100%; background: linear-gradient(90deg, #d9483f, #e0b25a); transition: width 0.3s ease; }
+.battleTurnBox { flex: 0 0 auto; text-align: center; padding-top: 6px; }
+.battleVsText { font-size: 18px; font-weight: bold; color: #8a8070; }
+.battleTurnLabel { font-size: 11px; color: #bcae8f; margin-top: 2px; }
+.battlePressurePanel { margin-top: 12px; display: flex; flex-direction: column; gap: 4px; }
+.battlePressureRow { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; }
+.battlePressureVal { color: #cfead0; width: 30px; text-align: center; }
+.battlePressureLabel { color: #bcae8f; width: 60px; text-align: center; }
+.battlePressurePct { font-weight: bold; width: 46px; text-align: center; }
+.battlePressureUp { color: #6fbf5c; }
+.battlePressureDown { color: #d9483f; }
+.battleField { position: relative; margin-top: 14px; min-height: 60px; display: flex; align-items: center; justify-content: space-between; }
+.battleTroopRow { flex: 1 1 0; display: flex; flex-wrap: wrap; gap: 4px; font-size: 13px; transition: opacity 0.3s ease; }
+.battleTroopRowRight { justify-content: flex-end; }
+.battleTroopIcon { background: rgba(255,255,255,0.06); border-radius: 6px; padding: 2px 5px; text-align: center; }
+.battleTroopStat { font-size: 10px; color: #bcae8f; }
+.battleFlashText {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  font-size: 14px; font-weight: bold; color: #ffe9b3; text-shadow: 0 0 6px rgba(0,0,0,0.8);
+  opacity: 0; white-space: nowrap; pointer-events: none;
+}
+.battleFlashText.battleFlashPlay { animation: battleFlash 0.9s ease-out; }
+@keyframes battleFlash {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+  25% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+  75% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.battleDefeatedCounter { text-align: center; font-size: 12px; color: #bcae8f; margin-top: 14px; }
+.battleControls { display: flex; gap: 10px; margin-top: 10px; }
+.battleSpeedBtn, .battleSkipBtn {
+  flex: 1 1 0; padding: 10px; border: none; border-radius: 8px;
+  background: #3a3a3a; color: #ddd; font-size: 13px; font-weight: bold;
+}
+.battleResultBox { text-align: center; margin-top: 16px; }
+.battleResultTitle { font-size: 22px; font-weight: bold; margin-bottom: 6px; }
+.battleResultWin { color: #6fbf5c; }
+.battleResultLose { color: #d9483f; }
+.battleResultText { font-size: 13px; color: #cfead0; line-height: 1.5; margin-bottom: 12px; }
+.battleResultCloseBtn { width: 100%; }

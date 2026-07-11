@@ -27,6 +27,7 @@
           const row = U.el('div', 'trainUnitRow' + (locked ? ' locked' : ''));
           row.appendChild(U.el('span', 'unitIcon', unit.icon));
           row.appendChild(U.el('span', 'unitName', unit.name));
+          row.appendChild(U.el('span', 'unitStats', '攻' + unit.stats.atk + ' 防' + unit.stats.def + ' 血' + unit.stats.hp));
           row.appendChild(U.el('span', 'unitCost', Object.keys(unit.cost).map((r) => D.RESOURCE_ICONS[r] + unit.cost[r]).join(' ')));
           if (!locked) {
             const btn5 = U.el('button', 'smallBtn', '訓練x5');
@@ -86,7 +87,7 @@
     head.appendChild(U.el('span', 'armyStatus', armyStatusLabel(army)));
     card.appendChild(head);
     const unitsLine = U.el('div', 'armyUnits', Object.keys(army.units).filter((u) => army.units[u] > 0)
-      .map((u) => D.unitDefById(u).icon + army.units[u]).join(' ') || '（無兵力）');
+      .map((u) => { const d = D.unitDefById(u); return d.icon + army.units[u] + '（攻' + d.stats.atk + ' 防' + d.stats.def + '）'; }).join('　') || '（無兵力）');
     card.appendChild(unitsLine);
     const heroState = army.heroStateId ? playerState.heroes[army.heroStateId] : null;
     card.appendChild(U.el('div', 'armyGeneral', heroState ? '主將：' + D.heroDefById(heroState.heroDataId).name : '未指派主將'));

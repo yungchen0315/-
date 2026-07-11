@@ -50,11 +50,23 @@
         const btn = U.el('button', 'smallBtn', '出戰');
         U.onTap(btn, () => {
           const r = Mission.fightMission(saveGame, playerState, mission.id, select.value, U.now());
-          if (r.ok) {
+          if (!r.ok) { Dlg.toast(r.reason); return; }
+          window.Game.UI.TopBar.refresh(playerState);
+          window.Game.UI.BattleScreen.play(playerState, {
+            title: mission.name,
+            attackerHeroStateId: r.attackerHeroStateId,
+            attackerUnitsBefore: r.attackerUnitsBefore,
+            defenderHeroStateId: r.defenderHeroStateId,
+            defenderUnitsBefore: r.defenderUnitsBefore,
+            defenderName: r.defenderName,
+            defenderFactionId: 'wei',
+            timeline: r.result.timeline,
+            win: r.win,
+            resultText: r.battle.text
+          }, () => {
             Dlg.toast(r.win ? '戰役勝利！' : '戰役失利，可再次挑戰');
             render(container, saveGame, playerState);
-            window.Game.UI.TopBar.refresh(playerState);
-          } else Dlg.toast(r.reason);
+          });
         });
         row.appendChild(btn);
         card.appendChild(row);
