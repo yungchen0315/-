@@ -16,6 +16,8 @@
    *   （確保離線期間事件不會無限堆積，也不需要玩家在線才能繼續進度）。
    * @property {Object<string,[number,number]>} resourceRanges 各資源的結算數量範圍
    *   [min, max]，正數為獲得、負數為損失。
+   * @property {[number,number]} [ingotRange] 元寶結算數量範圍（獨立於 resourceRanges，
+   *   不受倉庫上限影響）。
    */
 
   /** @type {EventTypeDef[]} */
@@ -29,7 +31,9 @@
     { id: 'good_harvest', name: '豐收之年', flavor: '風調雨順，今年田畝收成格外豐足。',
       resolveMs: 40 * 60000, resourceRanges: { food: [150, 300] } },
     { id: 'old_smith', name: '老鐵匠獻寶', flavor: '一位隱居的老鐵匠感念仁德，願獻上舊藏兵器。',
-      resolveMs: 40 * 60000, resourceRanges: { stone: [80, 180] } }
+      resolveMs: 40 * 60000, resourceRanges: { stone: [80, 180] } },
+    { id: 'noble_gift', name: '貴客獻禮', flavor: '一位遠道而來的貴客，感念款待之情，留下一袋元寶。',
+      resolveMs: 40 * 60000, resourceRanges: {}, ingotRange: [20, 60] }
   ];
 
   function eventTypeDefById(id) { return EVENT_TYPE_DEFS.find((e) => e.id === id); }

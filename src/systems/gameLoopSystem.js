@@ -38,6 +38,7 @@
     window.Game.Systems.Event.tick(playerState, now);
     window.Game.Systems.Mission.refreshMissionStatuses(playerState);
     window.Game.Systems.Achievement.checkAchievements(playerState);
+    window.Game.Systems.Gacha.tickDailyReward(playerState, now);
   }
 
   window.Game.Systems.GameLoop = { advanceTime };

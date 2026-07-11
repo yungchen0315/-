@@ -51,6 +51,7 @@
    * @property {PendingEventState[]} pendingEvents
    * @property {string[]} unlockedAchievementIds
    * @property {number} nextEventAt 下一次隨機事件的排程時間戳，供事件系統使用。
+   * @property {number} lastDailyRewardAt 上次發放每日簽到元寶的時間戳，供 gachaSystem 使用。
    */
 
   /**
@@ -89,7 +90,8 @@
       explorations: [],
       pendingEvents: [],
       unlockedAchievementIds: [],
-      nextEventAt: now + 8 * 60000
+      nextEventAt: now + 8 * 60000,
+      lastDailyRewardAt: now
     };
   }
 

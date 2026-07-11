@@ -61,12 +61,14 @@
       });
       if (mission.reward.unlockHeroId) window.Game.Systems.Hero.unlockHeroFromMission(playerState, mission.reward.unlockHeroId);
       if (mission.reward.itemReward) window.Game.Systems.Hero.grantItem(playerState, mission.reward.itemReward, 1);
+      if (mission.reward.ingot) playerState.resources.ingot = (playerState.resources.ingot || 0) + mission.reward.ingot;
       if (army.heroStateId) window.Game.Systems.Hero.awardExp(playerState.heroes[army.heroStateId], 100);
       refreshMissionStatuses(playerState);
       battle.outcome = 'win';
       battle.text = '「' + mission.name + '」戰役勝利！' +
         (mission.reward.unlockHeroId ? '武將「' + D.heroDefById(mission.reward.unlockHeroId).name + '」加入陣營。' : '') +
-        (mission.reward.itemReward ? '獲得「' + D.itemDefById(mission.reward.itemReward).name + '」。' : '');
+        (mission.reward.itemReward ? '獲得「' + D.itemDefById(mission.reward.itemReward).name + '」。' : '') +
+        (mission.reward.ingot ? '獲得元寶 x' + mission.reward.ingot + '。' : '');
     } else {
       battle.outcome = 'lose';
       battle.text = '「' + mission.name + '」戰役失利，部隊損失慘重，可整軍後再戰。';

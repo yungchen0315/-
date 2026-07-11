@@ -59,10 +59,28 @@
     return arr[Math.floor(Math.random() * arr.length)];
   }
 
+  /**
+   * 依權重從陣列中隨機取一個元素。
+   * @template T
+   * @param {T[]} entries
+   * @param {(entry:T) => number} weightFn
+   * @returns {T}
+   */
+  function weightedChoice(entries, weightFn) {
+    const total = entries.reduce((sum, e) => sum + weightFn(e), 0);
+    let r = Math.random() * total;
+    for (const e of entries) {
+      r -= weightFn(e);
+      if (r <= 0) return e;
+    }
+    return entries[entries.length - 1];
+  }
+
   window.Game.Utils.clamp = clamp;
   window.Game.Utils.lerp = lerp;
   window.Game.Utils.distance = distance;
   window.Game.Utils.tileDistance = tileDistance;
   window.Game.Utils.randomInt = randomInt;
   window.Game.Utils.choice = choice;
+  window.Game.Utils.weightedChoice = weightedChoice;
 })();

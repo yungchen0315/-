@@ -12,6 +12,8 @@
       const node = document.getElementById('topRes_' + r);
       if (node) node.textContent = D.RESOURCE_ICONS[r] + formatNum(playerState.resources[r]) + '/' + formatNum(eff.storageCap[r]);
     });
+    const ingotNode = document.getElementById('topRes_ingot');
+    if (ingotNode) ingotNode.textContent = '🧧' + formatNum(playerState.resources.ingot || 0);
     const powerNode = document.getElementById('topPower');
     if (powerNode) powerNode.textContent = '國力 ' + formatNum(window.Game.Systems.Economy.computePower(playerState));
   }
