@@ -37,6 +37,8 @@
       body.appendChild(U.el('div', 'generalStats', '武力 ' + stats.force + '　統率 ' + stats.cmd + '　智力 ' + stats.intel));
       body.appendChild(U.el('div', 'generalCap', '統率上限：可率領兵力總統率需求 ' + Hero.leadershipCap(heroState) + ' 以內'));
       body.appendChild(U.el('div', 'generalSkill', '【' + def.skill.name + '】' + def.skill.desc));
+      const effectText = D.describeSkillEffects(def.skill.effects);
+      if (effectText) body.appendChild(U.el('div', 'generalSkillEffect', effectText));
       const expNeeded = Hero.expNeededForLevel(heroState.level);
       const expBarWrap = U.el('div', 'expBarWrap');
       const expBar = U.el('div', 'expBar');
