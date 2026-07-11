@@ -9,7 +9,7 @@
 
 (function () {
   /**
-   * @typedef {'empty'|'capital'|'resource'|'monster'|'landmark'} TileType
+   * @typedef {'empty'|'capital'|'resource'|'monster'} TileType
    */
 
   /**
@@ -18,7 +18,7 @@
    * @property {number} x
    * @property {number} y
    * @property {TileType} type
-   * @property {string} [name] 顯示名稱（主城／產地／野怪營地／地標都有）。
+   * @property {string} [name] 顯示名稱（主城／產地／野怪營地都有）。
    * @property {string} [ownerFactionId] type 為 'capital' 時必填；type 為 'resource' 時
    *   在被佔領前為 undefined，佔領後設為佔領者的勢力 id（永久佔領，無需再駐守）。
    * @property {string} [resourceType] type 為 'resource' 時的資源種類。
@@ -26,7 +26,6 @@
    * @property {number} [guardPower] type 為 'resource'／'monster' 時的守備力估算值。
    * @property {number} [cooldownUntil] type 為 'monster' 時，擊破後的冷卻到期時間
    *   （epoch ms）；產地不使用冷卻機制，改用永久佔領。
-   * @property {string} [exploreTag] type 為 'landmark' 時，對應 ExploreTileDef.tag。
    */
 
   /**

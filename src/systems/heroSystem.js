@@ -1,5 +1,7 @@
 /* ============================================================================
- * heroSystem.js — 武將取得（劇情／探索，無抽卡）、升級、統率上限、裝備。
+ * heroSystem.js — 武將取得（劇情解鎖／酒館招募）、升級、統率上限、裝備。
+ * 酒館招募本身的抽取邏輯在 src/systems/gachaSystem.js；這裡只保留
+ * unlockHeroFromMission（劇情解鎖）與升級/裝備/領軍等共用邏輯。
  * 對應舊版 js/generals.js 與 js/items.js。
  * ==========================================================================*/
 
@@ -8,8 +10,6 @@
   const U = window.Game.Utils;
   const M = window.Game.Models;
 
-  const EXPLORE_BASE_MS = 6 * 60000;
-  const EXPLORE_COST = { gold: 150 };
   const LEADERSHIP_PER_CMD = 5;
   const GENERAL_MAX_LEVEL = 30;
 
@@ -41,50 +41,6 @@
   }
 
   function ownedHeroDataIds(playerState) { return new Set(Object.keys(playerState.heroes)); }
-
-  function availableExploreTargets(playerState) {
-    const owned = ownedHeroDataIds(playerState);
-    return D.HERO_DEFS.filter((h) => h.factionId === playerState.factionId && h.source.type === 'explore' && !owned.has(h.id));
-  }
-
-  function primaryCityTavernLevel(playerState) {
-    const city = Object.values(playerState.cities)[0];
-    return city ? city.buildings.tavern.level : 0;
-  }
-
-  function startExplore(playerState, heroDataId, now) {
-    if (primaryCityTavernLevel(playerState) <= 0) return { ok: false, reason: '需先建造酒館' };
-    const eff = window.Game.Systems.Economy.computeEffects(playerState);
-    if (playerState.explorations.length >= eff.exploreSlots) return { ok: false, reason: '探索隊已全數派出' };
-    const heroDef = D.HERO_DEFS.find((h) => h.id === heroDataId && h.factionId === playerState.factionId);
-    if (!heroDef || heroDef.source.type !== 'explore') return { ok: false, reason: '此武將無法探索取得' };
-    if (ownedHeroDataIds(playerState).has(heroDataId)) return { ok: false, reason: '已擁有此武將' };
-    if (!U.canAfford(playerState.resources, EXPLORE_COST)) return { ok: false, reason: '銀兩不足' };
-    U.subtractResources(playerState.resources, EXPLORE_COST);
-    const timeMs = Math.round(EXPLORE_BASE_MS / (eff.exploreSpeedMul || 1));
-    playerState.explorations.push({ id: U.generateId('explore'), heroDataId, startAt: now, completeAt: now + timeMs });
-    return { ok: true };
-  }
-
-  /** @returns {{heroGained?: string}[]} 供呼叫方（例如提示 toast）知道有哪些武將到位。 */
-  function resolveExplorations(playerState, now) {
-    const results = [];
-    for (let i = playerState.explorations.length - 1; i >= 0; i--) {
-      const job = playerState.explorations[i];
-      if (now < job.completeAt) continue;
-      playerState.explorations.splice(i, 1);
-      if (!playerState.heroes[job.heroDataId]) {
-        playerState.heroes[job.heroDataId] = M.createHeroState(job.heroDataId);
-        results.push({ heroGained: job.heroDataId });
-      } else {
-        // 武將已透過其他管道取得（例如同時派了兩隊探索同一人），改發銀兩安慰獎，不重複發武將。
-        const eff = window.Game.Systems.Economy.computeEffects(playerState);
-        playerState.resources.gold = U.clamp(playerState.resources.gold + 200, 0, eff.storageCap.gold);
-        results.push({ consolationGold: 200 });
-      }
-    }
-    return results;
-  }
 
   function unlockHeroFromMission(playerState, heroDataId) {
     if (!heroDataId) return;
@@ -151,8 +107,7 @@
 
   window.Game.Systems.Hero = {
     expNeededForLevel, effectiveStats, leadershipCap, awardExp,
-    ownedHeroDataIds, availableExploreTargets, startExplore, resolveExplorations,
-    unlockHeroFromMission, equipItem, unequipItem, grantItem,
+    ownedHeroDataIds, unlockHeroFromMission, equipItem, unequipItem, grantItem,
     assignHeroToArmy, unassignHero
   };
 })();

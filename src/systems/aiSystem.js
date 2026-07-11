@@ -20,7 +20,7 @@
     tryUpgrade(playerState, now);
     tryTrain(playerState, now);
     tryResearch(playerState, now);
-    tryExplore(playerState, now);
+    tryRecruit(playerState);
     tryMarch(saveGame, playerState, now);
   }
 
@@ -58,15 +58,9 @@
     Tech.queueResearch(playerState, U.choice(techs).id, now);
   }
 
-  function tryExplore(playerState, now) {
-    const city = window.Game.Systems.Army.primaryCity(playerState);
-    if (!city || city.buildings.tavern.level <= 0) return;
-    const eff = window.Game.Systems.Economy.computeEffects(playerState);
-    if (playerState.explorations.length >= eff.exploreSlots) return;
-    const targets = window.Game.Systems.Hero.availableExploreTargets(playerState);
-    if (targets.length === 0) return;
+  function tryRecruit(playerState) {
     if (Math.random() > 0.5) return;
-    window.Game.Systems.Hero.startExplore(playerState, U.choice(targets).id, now);
+    window.Game.Systems.Gacha.draw(playerState, U.choice(D.GACHA_POOLS).id, 1);
   }
 
   function tryMarch(saveGame, playerState, now) {

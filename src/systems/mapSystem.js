@@ -33,7 +33,7 @@
     });
 
     const resourcePool = ['wood', 'stone', 'gold', 'food'];
-    let resourceCount = 0, monsterCount = 0, exploreIdx = 0;
+    let resourceCount = 0, monsterCount = 0;
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const t = mapState.tiles[M.tileKey(x, y)];
@@ -55,12 +55,6 @@
           t.name = '野外賊寇';
           t.cooldownUntil = 0;
           monsterCount++;
-        } else if (roll < 0.20 && exploreIdx < D.EXPLORE_TILE_DEFS.length) {
-          const info = D.EXPLORE_TILE_DEFS[exploreIdx];
-          t.type = 'landmark';
-          t.name = info.name;
-          t.exploreTag = info.tag;
-          exploreIdx++;
         }
       }
     }

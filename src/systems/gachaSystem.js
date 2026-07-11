@@ -1,7 +1,8 @@
 /* ============================================================================
- * gachaSystem.js — 抽獎邏輯：三個依稀有度分級的獎池，消耗元寶抽武將／裝備。
- * 武將抽到重複的（已擁有）不會覆蓋，改為部分元寶返還，避免抽到「已經有的」
- * 卻沒有任何回饋。
+ * gachaSystem.js — 酒館招募邏輯：三個依稀有度分級的獎池，消耗元寶招募武將／裝備。
+ * 需先建成酒館（tavern.level >= 1）才能招募，酒館與科技的 gachaDiscountPct
+ * 效果會降低花費。武將抽到重複的（已擁有）不會覆蓋，改為部分元寶返還，避免
+ * 抽到「已經有的」卻沒有任何回饋。
  * ==========================================================================*/
 
 (function () {
@@ -51,6 +52,11 @@
     return U.weightedChoice(poolEntries(pool), (e) => e.weight);
   }
 
+  function tavernLevel(playerState) {
+    const city = window.Game.Systems.Army.primaryCity(playerState);
+    return city ? city.buildings.tavern.level : 0;
+  }
+
   /**
    * @param {PlayerState} playerState
    * @param {string} poolId
@@ -58,10 +64,13 @@
    * @returns {{ok:boolean, reason?:string, draws?:Array<Object>, poolId?:string}}
    */
   function draw(playerState, poolId, count) {
+    if (tavernLevel(playerState) <= 0) return { ok: false, reason: '需先建造酒館' };
     const pool = D.gachaPoolById(poolId);
     if (!pool) return { ok: false, reason: '找不到此獎池' };
     const n = count === 10 ? 10 : 1;
-    const cost = n === 10 ? pool.costTen : pool.costSingle;
+    const eff = window.Game.Systems.Economy.computeEffects(playerState);
+    const baseCost = n === 10 ? pool.costTen : pool.costSingle;
+    const cost = Math.round(baseCost * (1 - (eff.gachaDiscountPct || 0) / 100));
     if ((playerState.resources.ingot || 0) < cost) return { ok: false, reason: '元寶不足' };
     playerState.resources.ingot -= cost;
 
@@ -86,5 +95,5 @@
     return { ok: true, draws: results, poolId };
   }
 
-  window.Game.Systems.Gacha = { draw, poolEntries, tickDailyReward };
+  window.Game.Systems.Gacha = { draw, poolEntries, tickDailyReward, tavernLevel };
 })();

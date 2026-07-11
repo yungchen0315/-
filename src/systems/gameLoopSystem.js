@@ -33,7 +33,6 @@
       window.Game.Systems.Army.resolveTrainQueues(playerState, city, now);
     });
     window.Game.Systems.Technology.resolveResearch(playerState, now);
-    window.Game.Systems.Hero.resolveExplorations(playerState, now);
     window.Game.Systems.Army.resolveArmies(saveGame, playerState, now);
     window.Game.Systems.Event.tick(playerState, now);
     window.Game.Systems.Mission.refreshMissionStatuses(playerState);

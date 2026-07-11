@@ -138,12 +138,12 @@
     },
     tavern: {
       id: 'tavern', name: '酒館', icon: '🍶', category: 'general',
-      desc: '武將於此登場──派遣說客劇情探訪或酒館偶遇，皆不使用抽卡機率。',
+      desc: '招募武將的地方。建成後即可在「招募」分頁以元寶延攬人才，等級越高招募花費越省。',
       levels: buildLevels(MAX_BUILDING_LEVEL, (lv) => ({
         level: lv,
         cost: { gold: scale(150, 1.5, lv, 10), food: scale(80, 1.5, lv, 10) },
         timeMs: scale(200000, 1.35, lv),
-        effect: { exploreSlots: Math.min(3, 1 + Math.floor((lv - 1) / 4)), exploreSpeedMul: +(1 + 0.06 * (lv - 1)).toFixed(2) }
+        effect: { gachaDiscountPct: Math.min(20, (lv - 1) * 2) }
       }))
     },
     academy: {

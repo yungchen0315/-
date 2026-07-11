@@ -1,5 +1,6 @@
 /* ============================================================================
- * gachaScreen.js — 「抽獎」分頁：元寶餘額、銅/銀/金三個獎池的單抽/十連與結果揭示。
+ * gachaScreen.js — 「招募」分頁：酒館招募，元寶餘額、銅/銀/金三個獎池的
+ * 單抽/十連與結果揭示。需先建成酒館才能招募。
  * ==========================================================================*/
 
 (function () {
@@ -30,10 +31,12 @@
   function render(container, saveGame, playerState) {
     U.clearNode(container);
     const Gacha = window.Game.Systems.Gacha;
+    const tavernBuilt = Gacha.tavernLevel(playerState) > 0;
 
     const balancePanel = U.el('div', 'panel');
     balancePanel.appendChild(U.el('div', 'panelTitle', '元寶餘額：🧧 ' + (playerState.resources.ingot || 0)));
-    balancePanel.appendChild(U.el('div', 'subHint', '元寶透過戰役獎勵、成就、事件與每日簽到取得，可用來在下方獎池抽取武將與裝備。'));
+    balancePanel.appendChild(U.el('div', 'subHint', '元寶透過戰役獎勵、成就、事件與每日簽到取得，可用來在酒館招募武將與裝備。'));
+    if (!tavernBuilt) balancePanel.appendChild(U.el('div', 'subHint', '需先在城池分頁建造酒館，才能開始招募。'));
     container.appendChild(balancePanel);
 
     D.GACHA_POOLS.forEach((pool) => {
@@ -43,8 +46,8 @@
         '　裝備 tier ' + pool.itemTierRange[0] + '~' + pool.itemTierRange[1]));
 
       const row = U.el('div', 'gachaDrawRow');
-      const singleBtn = U.el('button', 'smallBtn', '單抽 🧧' + pool.costSingle);
-      const tenBtn = U.el('button', 'smallBtn', '十連 🧧' + pool.costTen);
+      const singleBtn = U.el('button', 'smallBtn' + (tavernBuilt ? '' : ' disabled'), '單抽 🧧' + pool.costSingle);
+      const tenBtn = U.el('button', 'smallBtn' + (tavernBuilt ? '' : ' disabled'), '十連 🧧' + pool.costTen);
       row.appendChild(singleBtn);
       row.appendChild(tenBtn);
       panel.appendChild(row);
@@ -66,7 +69,7 @@
   function showResults(pool, draws) {
     const overlay = U.el('div', 'gachaResultOverlay');
     const box = U.el('div', 'gachaResultBox');
-    box.appendChild(U.el('div', 'gachaResultTitle', pool.name + '　抽獎結果'));
+    box.appendChild(U.el('div', 'gachaResultTitle', pool.name + '　招募結果'));
     const grid = U.el('div', 'gachaResultGrid');
     draws.forEach((entry) => grid.appendChild(resultCard(entry)));
     box.appendChild(grid);
