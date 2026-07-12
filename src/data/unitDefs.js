@@ -49,11 +49,22 @@
 
   const UNIT_IDS = Object.keys(UNIT_DEFS);
 
+  /** 兵種角色的顯示名稱，用於兵種相剋說明。 */
+  const ROLE_LABELS = { infantry: '步兵', cavalry: '騎兵', ranged: '弓弩', siege: '攻城' };
+
   function unitDefById(type) { return UNIT_DEFS[type]; }
   function unitDefsTrainedBy(buildingType) { return UNIT_IDS.filter((u) => UNIT_DEFS[u].trainedBy === buildingType); }
 
+  /** 產生某兵種的相剋說明文字，例如「剋 騎兵」；無相剋則回傳空字串。 */
+  function describeCounters(unitDef) {
+    if (!unitDef || !unitDef.counters || !unitDef.counters.length) return '';
+    return '剋 ' + unitDef.counters.map((r) => ROLE_LABELS[r] || r).join('、');
+  }
+
   window.Game.Data.UNIT_DEFS = UNIT_DEFS;
   window.Game.Data.UNIT_IDS = UNIT_IDS;
+  window.Game.Data.ROLE_LABELS = ROLE_LABELS;
   window.Game.Data.unitDefById = unitDefById;
   window.Game.Data.unitDefsTrainedBy = unitDefsTrainedBy;
+  window.Game.Data.describeCounters = describeCounters;
 })();

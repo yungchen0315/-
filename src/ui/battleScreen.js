@@ -255,6 +255,8 @@
       idx++;
       if (ev.type === 'skill') {
         showFlash('【' + ev.skillName + '】');
+      } else if (ev.type === 'counter') {
+        showFlash('⚔ 兵種相剋！' + (ev.side === 'attacker' ? '我軍' : defender.name) + '佔優');
       } else if (ev.type === 'attack') {
         turnLabel.textContent = '回合 ' + ev.turn;
         showFlash((ev.side === 'attacker' ? '我軍' : defender.name) + ' 造成 ' + ev.damage + ' 傷害');
