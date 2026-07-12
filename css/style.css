@@ -442,22 +442,100 @@ button, .navBtn, select {
 .battlePressureDown { color: #d9483f; }
 
 .battleFieldStage {
-  position: relative; margin-top: 12px; height: 74px; border-radius: 8px;
-  background: linear-gradient(180deg, #3a5a3a 0%, #24381f 70%, #1a2818 100%);
-  border: 1px solid rgba(255,255,255,0.08);
+  position: relative; margin-top: 12px; height: 172px; border-radius: 8px;
+  background: #24381f;
+  border: 1px solid rgba(0,0,0,0.4);
+  box-shadow: inset 0 0 24px rgba(0,0,0,0.55);
   overflow: hidden;
 }
-.battleArmyCluster {
-  position: absolute; top: 50%; transform: translateY(-50%);
-  display: flex; flex-wrap: wrap; gap: 3px; width: 42%; will-change: transform;
+/* 繪製戰場背景：天空、遠山、城樓剪影、地面（純 CSS 分層，無外部圖檔）。 */
+.battleBackdrop { position: absolute; inset: 0; z-index: 0; }
+.battleBackdropSky { position: absolute; inset: 0; background: linear-gradient(180deg, #9fbcd0 0%, #bcc9c7 42%, #ddceac 56%, #cdb488 62%, transparent 62%); }
+.battleBackdropMountains {
+  position: absolute; left: -5%; right: -5%; bottom: 38%; height: 26%;
+  background: linear-gradient(180deg, #7c92a6, #61748a);
+  clip-path: polygon(0 100%, 8% 46%, 18% 74%, 30% 30%, 42% 66%, 55% 22%, 68% 60%, 80% 34%, 92% 70%, 100% 40%, 100% 100%);
+  opacity: 0.7;
 }
-.battleArmyClusterLeft { left: 6px; justify-content: flex-end; }
-.battleArmyClusterRight { right: 6px; justify-content: flex-start; }
-.battleToken { font-size: 18px; line-height: 1; transition: opacity 0.35s ease, transform 0.35s ease; }
+.battleBackdropFort {
+  position: absolute; left: 34%; right: 34%; bottom: 40%; height: 18%;
+  background: linear-gradient(180deg, #6a5940, #4f4130);
+  border-top: 5px solid transparent;
+  border-image: repeating-linear-gradient(90deg, #6a5940 0 6px, transparent 6px 11px) 5;
+}
+.battleBackdropFort::after {
+  content: ''; position: absolute; left: 40%; right: 40%; bottom: 0; top: 45%;
+  background: #2e2519; border-radius: 40% 40% 0 0;
+}
+.battleBackdropGround {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 40%;
+  background: linear-gradient(180deg, #c2a878 0%, #a5895c 45%, #7c6340 100%);
+  box-shadow: inset 0 6px 12px rgba(0,0,0,0.25);
+}
+.battleArmyCluster {
+  position: absolute; top: 12px;
+  display: flex; flex-wrap: wrap; gap: 2px; width: 34%; z-index: 2; opacity: 0.9; will-change: transform;
+}
+.battleArmyClusterLeft { left: 8px; justify-content: flex-start; }
+.battleArmyClusterRight { right: 8px; justify-content: flex-end; }
+.battleToken { font-size: 13px; line-height: 1; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.5)); transition: opacity 0.35s ease, transform 0.35s ease; }
 .battleToken.battleTokenGone { opacity: 0; transform: scale(0.2); }
+
+/* 金色衝擊光線：交鋒瞬間對角掃過的速度線。 */
+.battleClashRays {
+  position: absolute; inset: -30%; z-index: 4; opacity: 0; pointer-events: none;
+  background: repeating-linear-gradient(114deg,
+    rgba(255,255,255,0) 0 9px,
+    rgba(255,232,150,0.0) 9px 11px,
+    rgba(255,224,120,0.55) 11px 14px,
+    rgba(255,255,255,0) 14px 30px);
+  mix-blend-mode: screen;
+}
+.battleClashRays.battleClashRaysPlay { animation: battleRays 0.5s ease-out; }
+@keyframes battleRays {
+  0% { opacity: 0; transform: translateX(-12%) scaleY(0.85); }
+  35% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(12%) scaleY(1.15); }
+}
+
+/* 中央對衝的兩員大將立繪：偏窄、靠外、壓低，讓中央與上方露出繪製的戰場背景。 */
+.battleStageHero { position: absolute; bottom: -4px; width: 32%; z-index: 3; will-change: transform; }
+.battleStageHeroLeft { left: -2%; transform-origin: bottom center; }
+.battleStageHeroRight { right: -2%; transform-origin: bottom center; }
+.battleStagePortrait { width: 100%; filter: drop-shadow(0 6px 10px rgba(0,0,0,0.6)); }
+.battleStagePortraitFlip .heroPortraitSvg { transform: scaleX(-1); }
+.battleStageHeroLeft.battleHeroLungeLeft { animation: battleHeroLungeL 0.5s ease; }
+.battleStageHeroRight.battleHeroLungeRight { animation: battleHeroLungeR 0.5s ease; }
+@keyframes battleHeroLungeL { 0%, 100% { transform: translateX(0); } 45% { transform: translateX(20px) scale(1.04); } }
+@keyframes battleHeroLungeR { 0%, 100% { transform: translateX(0); } 45% { transform: translateX(-20px) scale(1.04); } }
+.battleStageHero.battleHeroHit { animation: battleHeroHit 0.42s ease; }
+@keyframes battleHeroHit {
+  0%, 100% { filter: drop-shadow(0 6px 10px rgba(0,0,0,0.6)) brightness(1); }
+  30% { filter: drop-shadow(0 6px 10px rgba(0,0,0,0.6)) brightness(1.7) saturate(0.6); transform: translateX(4px) rotate(1.5deg); }
+}
+
+/* 技能／相剋／勝負大橫幅（毛筆風金紅字）。 */
+.battleStageBanner {
+  position: absolute; left: 50%; top: 44%; transform: translate(-50%, -50%);
+  z-index: 5; opacity: 0; pointer-events: none; white-space: nowrap;
+  font-size: 27px; font-weight: 900; letter-spacing: 3px;
+  font-family: 'KaiTi', 'STKaiti', 'DFKai-SB', serif;
+  color: #ffe6a0;
+  -webkit-text-stroke: 1px #8a2a00;
+  text-shadow: 0 0 10px rgba(220,70,0,0.85), 0 3px 6px rgba(0,0,0,0.85);
+}
+.battleStageBanner.battleStageBannerPlay { animation: battleBannerSlam 1s ease-out; }
+@keyframes battleBannerSlam {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(1.9); }
+  18% { opacity: 1; transform: translate(-50%, -50%) scale(0.92); }
+  34% { transform: translate(-50%, -50%) scale(1.06); }
+  50% { transform: translate(-50%, -50%) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
 .battleImpactSpark {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  font-size: 26px; opacity: 0; pointer-events: none;
+  position: absolute; left: 50%; top: 52%; transform: translate(-50%, -50%);
+  font-size: 30px; opacity: 0; pointer-events: none; z-index: 4;
 }
 .battleImpactSpark.battleImpactPlay { animation: battleImpactPulse 0.5s ease-out; }
 @keyframes battleImpactPulse {

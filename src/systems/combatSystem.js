@@ -120,6 +120,47 @@
   const TURN_DEF_SOFTEN = 45;
   const MAX_TURNS = 10;
 
+  // 兵種相剋：相剋是「雙向」的——剋制方攻擊提升 COUNTER_BONUS，被剋方攻擊同時被削弱
+  // COUNTER_BONUS，兩邊一推一拉，讓槍剋騎、騎剋弓弩、弓弩剋步這種石頭剪刀布在同兵力
+  // 對戰下真的能翻盤，而不是被基礎數值差吃掉。加成／削弱幅度依「相剋兵種佔全軍比例」加權。
+  const COUNTER_BONUS = 0.35;
+
+  /** 統計一組兵力各「兵種角色」的數量與總數。 */
+  function roleTotals(units) {
+    const totals = {};
+    let total = 0;
+    Object.keys(units || {}).forEach((t) => {
+      const qty = units[t] || 0;
+      if (qty <= 0) return;
+      const d = D.unitDefById(t);
+      if (!d) return;
+      totals[d.role] = (totals[d.role] || 0) + qty;
+      total += qty;
+    });
+    return { totals, total };
+  }
+
+  /**
+   * 我方有多少「比例」的兵剋制到敵方的組成（0~1）：我全軍都剋、敵全軍都被剋時為 1，
+   * 完全沒剋則為 0。同時決定相剋方的攻擊加成與被剋方的攻擊削弱幅度。
+   */
+  function counterFraction(attackerUnits, defenderUnits) {
+    const def = roleTotals(defenderUnits);
+    if (def.total === 0) return 0;
+    let counterWeighted = 0, totalQty = 0;
+    Object.keys(attackerUnits || {}).forEach((t) => {
+      const qty = attackerUnits[t] || 0;
+      if (qty <= 0) return;
+      totalQty += qty;
+      const d = D.unitDefById(t);
+      if (d && d.counters && d.counters.length) {
+        const counteredQty = d.counters.reduce((s, role) => s + (def.totals[role] || 0), 0);
+        counterWeighted += qty * (counteredQty / def.total);
+      }
+    });
+    return totalQty === 0 ? 0 : counterWeighted / totalQty;
+  }
+
   /** 開場為某一方全隊武將依序推入「自帶技能＋已裝配戰法」的技能事件，供動畫逐一閃現。 */
   function pushSkillEvents(timeline, side, heroIds, playerState) {
     heroIds.forEach((id) => {
@@ -162,9 +203,17 @@
       defDef += defenderStaticGuard * 0.8;
       defHp += defenderStaticGuard * 4;
     }
+    // 兵種相剋：守軍若為固定守備力（野外據點／叛軍）視為步兵組成。相剋一推一拉——
+    // 剋制方攻擊 ×(1+B×剋制比例)，被剋方攻擊 ×(1−B×對方剋制比例)。
+    const defenderCompForCounter = defenderUnits || (defenderStaticGuard ? { infantry: 1 } : null);
+    const atkCounters = defenderCompForCounter ? counterFraction(attackerUnits, defenderCompForCounter) : 0;
+    const defCounters = defenderUnits ? counterFraction(defenderUnits, attackerUnits) : 0;
+    const atkCounterMul = (1 + COUNTER_BONUS * atkCounters) * (1 - COUNTER_BONUS * defCounters);
+    const defCounterMul = (1 + COUNTER_BONUS * defCounters) * (1 - COUNTER_BONUS * atkCounters);
+    defAtk *= defCounterMul;
     defDef *= 1 + (wallBonusPct || 0) / 100;
     defDef *= 1 + (atkStats.bonus.enemyDefPct || 0) / 100;
-    const attackerAtkFinal = atkStats.atk * (1 + (defBonus.enemyAtkPct || 0) / 100);
+    const attackerAtkFinal = atkStats.atk * (1 + (defBonus.enemyAtkPct || 0) / 100) * atkCounterMul;
     const attackerLossReductionPct = U.clamp(atkStats.bonus.lossReductionPct, 0, 60);
     const defenderLossReductionPct = U.clamp(defBonus.lossReductionPct, 0, 60);
 
@@ -177,6 +226,9 @@
     // 開場依序播放全隊每位武將的自帶技能與已裝配的戰法，讓多武將編隊的每個戰法都在動畫上現身。
     pushSkillEvents(timeline, 'attacker', attackerHeroIds, attackerPlayerState);
     pushSkillEvents(timeline, 'defender', defenderHeroIds, defenderPlayerState);
+    // 兵種相剋佔優時，開場也閃現一次相剋提示，讓玩家看得到「這場帶對兵種了」。
+    if (atkCounters - defCounters > 0.15) timeline.push({ turn: 0, side: 'attacker', type: 'counter' });
+    if (defCounters - atkCounters > 0.15) timeline.push({ turn: 0, side: 'defender', type: 'counter' });
 
     let turn = 0;
     let winner = null;

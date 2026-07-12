@@ -26,7 +26,8 @@
           const locked = unit.tier > (ld.effect.unlockUnitTier || 1);
           const row = U.el('div', 'trainUnitRow' + (locked ? ' locked' : ''));
           row.appendChild(U.el('span', 'unitIcon', unit.icon));
-          row.appendChild(U.el('span', 'unitName', unit.name));
+          const counterText = D.describeCounters(unit);
+          row.appendChild(U.el('span', 'unitName', unit.name + (counterText ? '（' + counterText + '）' : '')));
           row.appendChild(U.el('span', 'unitStats', '攻' + unit.stats.atk + ' 防' + unit.stats.def + ' 血' + unit.stats.hp));
           row.appendChild(U.el('span', 'unitCost', Object.keys(unit.cost).map((r) => D.RESOURCE_ICONS[r] + unit.cost[r]).join(' ')));
           if (!locked) {
