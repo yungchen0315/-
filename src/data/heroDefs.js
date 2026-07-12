@@ -67,7 +67,7 @@
       [{ stat: 'lossReductionPct', value: 15 }],
       { type: 'story', missionId: 'shu_m1' }),
     hero('guanyu', '關羽', 'shu', 5, 97, 93, 75, '武聖', '出戰步兵/槍兵攻擊力大幅提升',
-      [{ stat: 'unitAtkPct', unit: 'infantry', value: 15 }, { stat: 'unitAtkPct', unit: 'spearman', value: 15 }],
+      [{ stat: 'unitAtkPct', unit: 'infantry', value: 15 }],
       { type: 'story', missionId: 'shu_m3' }),
     hero('zhangfei', '張飛', 'shu', 5, 96, 78, 55, '咆哮', '戰鬥開始時使敵軍全體防禦力下降',
       [{ stat: 'enemyDefPct', value: -12 }],
@@ -79,7 +79,7 @@
       [{ stat: 'unitAtkPct', unit: 'cavalry', value: 18 }],
       { type: 'recruit' }),
     hero('huangzhong', '黃忠', 'shu', 4, 92, 79, 65, '百步穿楊', '弓騎兵/弩兵造成的傷害提升',
-      [{ stat: 'unitAtkPct', unit: 'crossbowman', value: 16 }, { stat: 'unitAtkPct', unit: 'horsearcher', value: 16 }],
+      [{ stat: 'unitAtkPct', unit: 'ranged', value: 16 }, { stat: 'unitAtkPct', unit: 'cavalry', value: 16 }],
       { type: 'recruit' }),
     hero('zhugeliang', '諸葛亮', 'shu', 5, 38, 92, 100, '奇謀', '戰鬥中我軍傷亡降低且獲得額外資源',
       [{ stat: 'lossReductionPct', value: 12 }, { stat: 'lootBonusPct', value: 15 }],
@@ -153,7 +153,7 @@
       [{ stat: 'lossReductionPct', value: 6 }],
       { type: 'recruit' }),
     hero('sunshangxiang', '孫尚香', 'wu', 3, 85, 76, 66, '弓馬嫻熟', '弓騎兵造成的傷害提升',
-      [{ stat: 'unitAtkPct', unit: 'horsearcher', value: 16 }],
+      [{ stat: 'unitAtkPct', unit: 'cavalry', value: 16 }],
       { type: 'recruit' }, 'f'),
     hero('zhoutai', '周泰', 'wu', 2, 86, 70, 45, '捨身', '守護主將，承受本應由主將承受的傷害',
       [{ stat: 'hpPct', value: 10 }],
@@ -185,9 +185,10 @@
     return effects.map((e) => {
       if (e.stat === 'lossReductionPct') return '我軍傷亡降低 ' + Math.abs(e.value) + '%' + (WHEN_LABELS[e.when] || '');
       const sign = e.value >= 0 ? '+' : '';
-      const label = e.stat === 'unitAtkPct'
-        ? ((window.Game.Data.unitDefById(e.unit) || {}).name || e.unit) + '攻擊'
-        : (STAT_LABELS[e.stat] || e.stat);
+      // unitAtkPct 的 unit 是兵種角色（infantry/cavalry/ranged/siege），優先用角色名稱顯示。
+      const unitLabel = (window.Game.Data.ROLE_LABELS && window.Game.Data.ROLE_LABELS[e.unit])
+        || (window.Game.Data.unitDefById(e.unit) || {}).name || e.unit;
+      const label = e.stat === 'unitAtkPct' ? unitLabel + '攻擊' : (STAT_LABELS[e.stat] || e.stat);
       return label + ' ' + sign + e.value + '%' + (WHEN_LABELS[e.when] || '');
     }).join('、');
   }

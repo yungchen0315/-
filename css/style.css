@@ -178,6 +178,12 @@ button, .navBtn, select {
 .tacticChip.tacticChipFilled { cursor: pointer; }
 .tacticEquipRow { display: flex; gap: 6px; margin-top: 6px; }
 .tacticEquipRow .armySelect { flex: 1 1 auto; }
+.tacticLibRow { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 12px; }
+.tacticLibStar { flex: 0 0 auto; color: #e0b25a; width: 30px; }
+.tacticLibName { flex: 0 0 68px; color: #cdbcf0; }
+.tacticLibEff { flex: 1 1 auto; color: #bcae8f; font-size: 11px; }
+.tacticLibState { flex: 0 0 auto; color: #8a8070; font-size: 11px; }
+.tacticLibState.tacticLibEquipped { color: #6fbf5c; }
 .exploreRow, .exploreTargetRow, .queueRow, .campaignFightRow {
   display: flex; justify-content: space-between; align-items: center;
   padding: 6px 0; border-top: 1px solid rgba(255,255,255,0.06);
