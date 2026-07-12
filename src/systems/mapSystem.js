@@ -143,8 +143,41 @@
     });
 
     generateTerrain(mapState, factionDefs, capitalByFaction);
+    convertEmptyTilesToLand(mapState);
 
     return capitalByFaction;
+  }
+
+  /* ------------------------------------------------------------------------
+   * 土地格（率土之濱式「整張地圖都是地」）：地圖上不再有無意義的空地，每一格
+   * 都是可佔領的土地——依地形化為農田／聚落／林地／山岩／漁場，守備力隨離
+   * 首都的距離遞增、佔領後有少量固定產出。土地格直接沿用 type 'resource' 的
+   * 全部既有機制（連鎖佔領、戰鬥、經濟產出、AI 擴張），僅以 isLand 標記
+   * 供地圖畫面改用田野質感呈現（不畫資源圖示）。
+   * ------------------------------------------------------------------------ */
+  const LAND_PROFILE_BY_TERRAIN = {
+    mountain: { resourceType: 'stone', name: '山岩' },
+    forest: { resourceType: 'wood', name: '林地' },
+    water: { resourceType: 'food', name: '漁場' }
+  };
+
+  function makeLandTile(t, capitals) {
+    const dist = capitals.length ? Math.min.apply(null, capitals.map((c) => U.tileDistance(c, t))) : 5;
+    const profile = LAND_PROFILE_BY_TERRAIN[t.terrain]
+      || (Math.random() < 0.2 ? { resourceType: 'gold', name: '聚落' } : { resourceType: 'food', name: '農田' });
+    t.type = 'resource';
+    t.isLand = true;
+    t.ownerFactionId = null;
+    t.resourceType = profile.resourceType;
+    t.name = profile.name;
+    t.guardPower = 15 + dist * 4 + U.randomInt(0, 20);
+    t.yieldPerMin = 1 + Math.round(t.guardPower / 60);
+  }
+
+  /** 把地圖上所有剩餘空地轉為可佔領的土地格。開新地圖與舊存檔載入時共用。 */
+  function convertEmptyTilesToLand(mapState) {
+    const capitals = Object.values(mapState.tiles).filter((t) => t.type === 'capital');
+    Object.values(mapState.tiles).forEach((t) => { if (t.type === 'empty') makeLandTile(t, capitals); });
   }
 
   /**
@@ -330,7 +363,7 @@
 
   window.Game.Systems.Map = {
     TERRITORY_REACH,
-    generateMap, tileAt, capitalTileOf, captureResourceTile, captureCityTile,
+    generateMap, convertEmptyTilesToLand, tileAt, capitalTileOf, captureResourceTile, captureCityTile,
     ownedResourceTiles, ownedResourceYieldPerMin, capturableCityTiles,
     ownedTiles, isValidAttackTarget, territoryReachKeys, attackableTargetKeys, canAttackTile
   };
