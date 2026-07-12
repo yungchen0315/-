@@ -303,6 +303,12 @@
     return { infantry: Math.max(1, Math.round((guardPower || 0) / 15)) };
   }
 
+
+  /** 此格地形給守方的防禦加成（％），與城防加成同一條 wallBonusPct 通道套用。 */
+  function terrainDefBonusPct(tile) {
+    return (D.terrainDefOf ? D.terrainDefOf(tile) : { defBonusPct: 0 }).defBonusPct || 0;
+  }
+
   const MAP_BATTLE_MIN_DURATION_MS = 6000;
   const MAP_BATTLE_MS_PER_EVENT = 900;
 
@@ -340,7 +346,7 @@
     const result = resolveBattle({
       attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerSubHeroStateIds: army.subHeroStateIds, attackerEff: eff, attackerPlayerState: playerState,
       defenderUnits: defUnits, defenderHeroStateId, defenderSubHeroStateIds, defenderEff: defEff, defenderPlayerState: defender,
-      wallBonusPct: defEff.defenseBonusPct + defEff.wallDefPct
+      wallBonusPct: defEff.defenseBonusPct + defEff.wallDefPct + terrainDefBonusPct(tile)
     });
     const win = result.winner === 'attacker';
     const resultText = win
@@ -359,7 +365,7 @@
     const defenderUnitsBefore = guardDisplayUnits(tile.guardPower);
     const result = resolveBattle({
       attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerSubHeroStateIds: army.subHeroStateIds, attackerEff: eff, attackerPlayerState: playerState,
-      defenderStaticGuard: tile.guardPower
+      defenderStaticGuard: tile.guardPower, wallBonusPct: terrainDefBonusPct(tile)
     });
     const win = result.winner === 'attacker';
     const resultText = win
@@ -380,7 +386,7 @@
       const defenderUnitsBefore = guardDisplayUnits(tile.guardPower);
       const result = resolveBattle({
         attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerSubHeroStateIds: army.subHeroStateIds, attackerEff: eff, attackerPlayerState: playerState,
-        defenderStaticGuard: tile.guardPower
+        defenderStaticGuard: tile.guardPower, wallBonusPct: terrainDefBonusPct(tile)
       });
       const win = result.winner === 'attacker';
       const resultText = win
@@ -405,7 +411,7 @@
     const result = resolveBattle({
       attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerSubHeroStateIds: army.subHeroStateIds, attackerEff: eff, attackerPlayerState: playerState,
       defenderUnits: defUnits, defenderHeroStateId, defenderSubHeroStateIds, defenderEff: defEff, defenderPlayerState: defender,
-      wallBonusPct: defEff.defenseBonusPct + defEff.wallDefPct
+      wallBonusPct: defEff.defenseBonusPct + defEff.wallDefPct + terrainDefBonusPct(tile)
     });
     const win = result.winner === 'attacker';
     const resultText = win
@@ -424,7 +430,7 @@
     const defenderUnitsBefore = guardDisplayUnits(tile.guardPower);
     const result = resolveBattle({
       attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerSubHeroStateIds: army.subHeroStateIds, attackerEff: eff, attackerPlayerState: playerState,
-      defenderStaticGuard: tile.guardPower
+      defenderStaticGuard: tile.guardPower, wallBonusPct: terrainDefBonusPct(tile)
     });
     const win = result.winner === 'attacker';
     let resultText = win ? '擊破' + tile.name + '守軍，獲得豐厚資源。' : '進攻' + tile.name + '失利，部隊損失慘重，暫時撤退。';

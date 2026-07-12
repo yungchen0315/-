@@ -33,6 +33,10 @@
    *   守備力估算值。
    * @property {number} [cooldownUntil] type 為 'monster' 時，擊破後的冷卻到期時間
    *   （epoch ms）；產地與城池不使用冷卻機制，改用永久佔領。
+   * @property {'plain'|'forest'|'mountain'|'water'|'pass'} [terrain] 地形（見
+   *   src/data/mapConfigDefs.js 的 TERRAIN_DEFS）：影響此格戰鬥時守方的防禦加成
+   *   與向此格行軍的耗時。開新遊戲時由 mapSystem.generateMap 產生；舊存檔沒有
+   *   此欄位時一律視為平原。
    */
 
   /**
@@ -52,7 +56,7 @@
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const id = x + '_' + y;
-        tiles[id] = { id, x, y, type: 'empty' };
+        tiles[id] = { id, x, y, type: 'empty', terrain: 'plain' };
       }
     }
     return { width, height, tiles };

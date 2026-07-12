@@ -107,7 +107,9 @@
     const city = primaryCity(playerState);
     const origin = { x: city.tileX, y: city.tileY };
     const dist = U.tileDistance(origin, targetTile) || 1;
-    const travel = marchDurationMs(army, dist, armySpeedBonus(playerState, army));
+    // 地形影響行軍：往山地／關隘等難行地形進軍時耗時增加（回程輕裝走原路，不再受罰）。
+    const terrainMul = D.terrainDefOf ? D.terrainDefOf(targetTileState).marchMul : 1;
+    const travel = Math.round(marchDurationMs(army, dist, armySpeedBonus(playerState, army)) * terrainMul);
     army.status = 'marching';
     army.departAt = now;
     army.arriveAt = now + travel;
