@@ -75,6 +75,8 @@
     });
     if (!saveGame.activeBattles) saveGame.activeBattles = {};
     Object.values((saveGame.map && saveGame.map.tiles) || {}).forEach((t) => { if (!t.terrain) t.terrain = 'plain'; });
+    // 舊存檔的空地一律轉為可佔領的土地格（新地圖在 generateMap 時就已轉換）。
+    if (saveGame.map) window.Game.Systems.Map.convertEmptyTilesToLand(saveGame.map);
   }
 
   function startFresh(factionId) {

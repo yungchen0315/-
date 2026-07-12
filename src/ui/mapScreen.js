@@ -127,57 +127,160 @@
     return ((h >>> 0) % 1000) / 1000;
   }
 
-  const GRASS_SHADES = ['#3f6b45', '#456f4a', '#3a6440', '#4a7550'];
-  const REGION_TINT = { shu: '#3aa15c', wei: '#3a6bb0', wu: '#c0392b' };
-  // 各地形的底色（平原沿用草地深淺）與空地上的小圖示。
-  const TERRAIN_FILL = {
-    forest: ['#2f5936', '#345f3b', '#2a5231'],
-    mountain: ['#6b6257', '#736a5e', '#5f574d'],
-    water: ['#3a6a8f', '#3f7096', '#356383'],
-    pass: ['#4a4038', '#524740']
-  };
-  const TERRAIN_GLYPH = { forest: '🌲', mountain: '⛰️', water: '', pass: '' };
+  // 田塊／草地／道路配色：整張畫布先鋪土路色，每格內縮繪製，格與格之間自然露出
+  // 田埂道路（參考率土之濱地圖的田字間隔）；水域滿版繪製、與相鄰水格連成河流。
+  const ROAD_COLOR = '#9c8c68';
+  const TILE_GAP = 2;
+  const FIELD_TONES = ['#8aa85e', '#95b063', '#7d9c55', '#a3b56a', '#88a35b', '#90ab60'];
+  const VILLAGE_TONES = ['#a8a06a', '#b0a468'];
+  const GRASS_TONES = ['#6f9b52', '#79a45a', '#679250'];
 
   function drawTerrain(ctx, tile, sx, sy, size) {
-    const terrain = tile.terrain && tile.terrain !== 'plain' ? tile.terrain : null;
-    if (terrain && TERRAIN_FILL[terrain]) {
-      const fills = TERRAIN_FILL[terrain];
-      ctx.fillStyle = fills[Math.floor(hashTile(tile.x, tile.y, 1) * fills.length)];
-      ctx.fillRect(sx, sy, size, size);
-      if (tile.type === 'empty' && TERRAIN_GLYPH[terrain]) {
-        drawGlyph(ctx, TERRAIN_GLYPH[terrain], sx, sy, 0.34, '#dfe8dc');
-      }
-      // 水面波紋。
-      if (terrain === 'water' && hashTile(tile.x, tile.y, 5) < 0.5) {
-        ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(sx + size * 0.2, sy + size * 0.55);
-        ctx.quadraticCurveTo(sx + size * 0.5, sy + size * 0.45, sx + size * 0.8, sy + size * 0.55);
-        ctx.stroke();
-      }
+    const terrain = tile.terrain || 'plain';
+    // 水域：滿版、不留路縫，讓相鄰水格連成連續的河流／湖泊。
+    if (terrain === 'water') {
+      ctx.fillStyle = ['#3d6f96', '#41739b', '#396a90'][Math.floor(hashTile(tile.x, tile.y, 1) * 3)];
+      ctx.fillRect(sx - 1, sy - 1, size + 2, size + 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+      ctx.lineWidth = 1;
+      const wy = sy + size * (0.35 + hashTile(tile.x, tile.y, 5) * 0.35);
+      ctx.beginPath();
+      ctx.moveTo(sx + size * 0.15, wy);
+      ctx.quadraticCurveTo(sx + size * 0.5, wy - size * 0.1, sx + size * 0.85, wy);
+      ctx.stroke();
       return;
     }
-    const shadeIdx = Math.floor(hashTile(tile.x, tile.y, 1) * GRASS_SHADES.length);
-    ctx.fillStyle = GRASS_SHADES[shadeIdx];
-    ctx.fillRect(sx, sy, size, size);
-    // 淡淡的勢力區域色調，讓玩家一眼看出地圖上哪一塊大致是哪個勢力的地盤。
-    if (tile.regionFactionId && REGION_TINT[tile.regionFactionId]) {
-      ctx.globalAlpha = 0.14;
-      ctx.fillStyle = REGION_TINT[tile.regionFactionId];
-      ctx.fillRect(sx, sy, size, size);
-      ctx.globalAlpha = 1;
+    const ix = sx + TILE_GAP, iy = sy + TILE_GAP, iw = size - TILE_GAP * 2;
+    if (terrain === 'pass') {
+      ctx.fillStyle = '#5a4e40';
+      ctx.fillRect(ix, iy, iw, iw);
+      return;
     }
-    // 零星斑點，增加手繪紋理感。
-    const speckRoll = hashTile(tile.x, tile.y, 2);
-    if (speckRoll < 0.35) {
-      ctx.fillStyle = 'rgba(0,0,0,0.08)';
-      const px = sx + size * (0.2 + hashTile(tile.x, tile.y, 3) * 0.5);
-      const py = sy + size * (0.2 + hashTile(tile.x, tile.y, 4) * 0.5);
+    if (terrain === 'mountain') {
+      ctx.fillStyle = GRASS_TONES[Math.floor(hashTile(tile.x, tile.y, 1) * GRASS_TONES.length)];
+      ctx.fillRect(ix, iy, iw, iw);
+      drawMountainPeaks(ctx, tile, ix, iy, iw);
+      return;
+    }
+    if (terrain === 'forest') {
+      ctx.fillStyle = GRASS_TONES[Math.floor(hashTile(tile.x, tile.y, 1) * GRASS_TONES.length)];
+      ctx.fillRect(ix, iy, iw, iw);
+      drawTreeCluster(ctx, tile, ix, iy, iw);
+      return;
+    }
+    // 平原：農田（田壟紋理）或聚落（土黃色地基），像照片裡一格格的田塊。
+    const isVillage = tile.isLand && tile.resourceType === 'gold';
+    const tones = isVillage ? VILLAGE_TONES : FIELD_TONES;
+    ctx.fillStyle = tones[Math.floor(hashTile(tile.x, tile.y, 1) * tones.length)];
+    ctx.fillRect(ix, iy, iw, iw);
+    // 田壟：橫向淺色細紋，做出耕地質感。
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 1; i <= 3; i++) {
+      const ly = iy + (iw * i) / 4;
+      ctx.moveTo(ix + 1, ly);
+      ctx.lineTo(ix + iw - 1, ly);
+    }
+    ctx.stroke();
+    // 聚落畫幾間小屋頂；一般田地偶爾點綴一叢灌木。
+    if (isVillage) {
+      drawHuts(ctx, tile, ix, iy, iw);
+    } else if (hashTile(tile.x, tile.y, 2) < 0.3) {
+      drawBush(ctx, ix + iw * (0.2 + hashTile(tile.x, tile.y, 3) * 0.5), iy + iw * (0.2 + hashTile(tile.x, tile.y, 4) * 0.5), iw * 0.1);
+    }
+  }
+
+  /** 手繪風小樹叢：3~4 棵樹冠＋樹幹，位置由座標 hash 決定（每次重繪都一致）。 */
+  function drawTreeCluster(ctx, tile, ix, iy, iw) {
+    const count = 3 + Math.floor(hashTile(tile.x, tile.y, 6) * 2);
+    for (let i = 0; i < count; i++) {
+      const tx = ix + iw * (0.18 + hashTile(tile.x, tile.y, 10 + i) * 0.64);
+      const ty = iy + iw * (0.25 + hashTile(tile.x, tile.y, 20 + i) * 0.55);
+      const r = iw * (0.11 + hashTile(tile.x, tile.y, 30 + i) * 0.05);
+      ctx.fillStyle = '#4a3826';
+      ctx.fillRect(tx - 1, ty, 2, r);
+      ctx.fillStyle = i % 2 ? '#2f6b3a' : '#3a7a44';
       ctx.beginPath();
-      ctx.arc(px, py, size * 0.06, 0, Math.PI * 2);
+      ctx.arc(tx, ty - r * 0.35, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.beginPath();
+      ctx.arc(tx - r * 0.3, ty - r * 0.55, r * 0.4, 0, Math.PI * 2);
       ctx.fill();
     }
+  }
+
+  /** 手繪風山峰：主峰＋側峰，灰岩色帶白色雪頂。 */
+  function drawMountainPeaks(ctx, tile, ix, iy, iw) {
+    const cx = ix + iw / 2;
+    ctx.fillStyle = '#7a7266';
+    ctx.beginPath();
+    ctx.moveTo(ix + iw * 0.08, iy + iw * 0.88);
+    ctx.lineTo(cx, iy + iw * 0.16);
+    ctx.lineTo(ix + iw * 0.92, iy + iw * 0.88);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#655d51';
+    ctx.beginPath();
+    ctx.moveTo(ix + iw * 0.45, iy + iw * 0.88);
+    ctx.lineTo(ix + iw * 0.72, iy + iw * 0.4);
+    ctx.lineTo(ix + iw * 0.95, iy + iw * 0.88);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#e8e6df';
+    ctx.beginPath();
+    ctx.moveTo(cx - iw * 0.1, iy + iw * 0.34);
+    ctx.lineTo(cx, iy + iw * 0.16);
+    ctx.lineTo(cx + iw * 0.1, iy + iw * 0.34);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  /** 聚落的小屋：兩三間土牆深頂小屋。 */
+  function drawHuts(ctx, tile, ix, iy, iw) {
+    for (let i = 0; i < 2; i++) {
+      const hx = ix + iw * (0.2 + hashTile(tile.x, tile.y, 40 + i) * 0.45);
+      const hy = iy + iw * (0.3 + hashTile(tile.x, tile.y, 50 + i) * 0.35);
+      const w = iw * 0.22, h = iw * 0.16;
+      ctx.fillStyle = '#8a765a';
+      ctx.fillRect(hx, hy, w, h);
+      ctx.fillStyle = '#5f4632';
+      ctx.beginPath();
+      ctx.moveTo(hx - 1, hy);
+      ctx.lineTo(hx + w / 2, hy - h * 0.7);
+      ctx.lineTo(hx + w + 1, hy);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  function drawBush(ctx, bx, by, r) {
+    ctx.fillStyle = 'rgba(47,90,54,0.7)';
+    ctx.beginPath();
+    ctx.arc(bx, by, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  /** 勢力旗幟：佔領的土地插上勢力色小旗（旗桿＋三角旗），一眼看出各家領地。 */
+  function drawFlag(ctx, sx, sy, size, color) {
+    const px = sx + size * 0.7, py = sy + size * 0.1;
+    ctx.strokeStyle = '#33261a';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(px, py + size * 0.36);
+    ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(px + size * 0.24, py + size * 0.09);
+    ctx.lineTo(px, py + size * 0.19);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
   }
 
   function draw() {
@@ -185,7 +288,8 @@
     if (!saveGame || !View.ctx) return;
     const ctx = View.ctx, canvas = View.canvas;
     const now = U.now();
-    ctx.fillStyle = '#141f16';
+    // 背景鋪土路色：每格內縮繪製後，格與格之間自然露出田埂道路。
+    ctx.fillStyle = ROAD_COLOR;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     const startTx = Math.floor(View.camX / View.tilePx), startTy = Math.floor(View.camY / View.tilePx);
@@ -204,28 +308,30 @@
       for (let tx = Math.max(0, startTx); tx <= Math.min(D.MAP_CONFIG.width - 1, endTx); tx++) {
         const tile = window.Game.Systems.Map.tileAt(saveGame.map, tx, ty);
         const sx = tx * View.tilePx - View.camX, sy = ty * View.tilePx - View.camY;
-        drawTerrain(ctx, tile, sx, sy, size - 1);
+        drawTerrain(ctx, tile, sx, sy, size);
         // 領土影響範圍：領土往外 2 格內的格子鋪一層淡淡的勢力色，畫出「你的地盤」。
         if (reachKeys.has(tile.id)) {
-          ctx.globalAlpha = 0.12;
+          ctx.globalAlpha = 0.1;
           ctx.fillStyle = humanColor;
-          ctx.fillRect(sx, sy, size - 1, size - 1);
+          ctx.fillRect(sx, sy, size, size);
           ctx.globalAlpha = 1;
         }
-        ctx.strokeStyle = 'rgba(0,0,0,0.15)';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(sx + 0.5, sy + 0.5, size - 2, size - 2);
 
         if (tile.type === 'capital') {
           drawCapital(ctx, tile, sx, sy, size);
         } else if (tile.type === 'city') {
           drawCity(ctx, tile, sx, sy, size);
-        } else if (tile.type === 'resource') {
+        } else if (tile.type === 'resource' && !tile.isLand) {
           drawResource(ctx, tile, sx, sy, size);
         } else if (tile.type === 'monster') {
           ctx.fillStyle = 'rgba(138,43,43,0.35)';
-          ctx.fillRect(sx + 1, sy + 1, size - 3, size - 3);
+          ctx.fillRect(sx + 2, sy + 2, size - 4, size - 4);
           drawGlyph(ctx, '⚔', sx, sy, 0.42, '#ffd9d9');
+        }
+
+        // 勢力旗幟：任何被佔領的土地（含一般土地格）插上該勢力顏色的小旗。
+        if (tile.ownerFactionId && (tile.type === 'city' || tile.type === 'resource')) {
+          drawFlag(ctx, sx, sy, size, D.factionDefById(tile.ownerFactionId).color);
         }
 
         // 可出兵目標：與領土相鄰、現在就能派兵攻打的據點／城池，用一圈黃色虛線框標出，
@@ -296,14 +402,14 @@
       ctx.strokeStyle = D.factionDefById(tile.ownerFactionId).color;
       ctx.lineWidth = 3;
       ctx.strokeRect(sx + 3, sy + 3, size - 7, size - 7);
-      drawGlyph(ctx, '🏰', sx, sy, 0.4, '#fff');
+      drawGlyph(ctx, tile.terrain === 'pass' ? '⛩️' : '🏰', sx, sy, 0.4, '#fff');
     } else {
       ctx.strokeStyle = '#8a8070';
       ctx.setLineDash([3, 2]);
       ctx.lineWidth = 2;
       ctx.strokeRect(sx + 3, sy + 3, size - 7, size - 7);
       ctx.setLineDash([]);
-      drawGlyph(ctx, '🚩', sx, sy, 0.38, '#d8d0b8');
+      drawGlyph(ctx, tile.terrain === 'pass' ? '⛩️' : '🚩', sx, sy, 0.38, '#d8d0b8');
     }
     drawLabel(ctx, tile.name, sx, sy, size, tile.ownerFactionId ? '#fff' : '#c9c0a8');
   }

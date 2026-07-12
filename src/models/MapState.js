@@ -28,6 +28,9 @@
    * @property {string} [cityId] type 為 'city' 時，對應的 PlayerState.cities key，
    *   在整場遊戲中固定不變（即使易主也不變），易主時會建立一份全新的 CityState。
    * @property {string} [resourceType] type 為 'resource' 時的資源種類。
+   * @property {boolean} [isLand] type 為 'resource' 時，標記此格是「由空地轉成的
+   *   一般土地」（農田／聚落／林地／山岩／漁場，見 mapSystem.convertEmptyTilesToLand）：
+   *   機制與資源點完全相同（可佔領、有產出），僅地圖畫面改以田野質感呈現、不畫資源圖示。
    * @property {number} [yieldPerMin] type 為 'resource' 時，佔領後每分鐘的固定產出量。
    * @property {number} [guardPower] type 為 'resource'／'monster'／未佔領的 'city' 時的
    *   守備力估算值。
