@@ -142,7 +142,58 @@
       }
     });
 
+    generateTerrain(mapState, factionDefs, capitalByFaction);
+
     return capitalByFaction;
+  }
+
+  /**
+   * 地形生成：以「種子＋擴散」灑出成片的山地／森林／水域（比逐格純隨機更像
+   * 自然地貌），首都與其相鄰格保持平原（出生點不受地形懲罰）；最後在每兩個
+   * 首都連線的中點附近，挑一座最近的城池升格為「關隘」——山地要衝、易守難攻，
+   * 守備力同步提高，成為勢力之間兵家必爭的隘口。
+   */
+  function generateTerrain(mapState, factionDefs, capitalByFaction) {
+    const w = mapState.width, h = mapState.height;
+    const capitals = factionDefs.map((f) => capitalByFaction[f.id]);
+    const nearCapital = (x, y) => capitals.some((c) => U.tileDistance(c, { x, y }) <= 2);
+
+    function sprinkle(terrain, seedCount, radius) {
+      for (let s = 0; s < seedCount; s++) {
+        const cx = U.randomInt(1, w - 2), cy = U.randomInt(1, h - 2);
+        for (let dy = -radius; dy <= radius; dy++) {
+          for (let dx = -radius; dx <= radius; dx++) {
+            const x = cx + dx, y = cy + dy;
+            if (x < 0 || y < 0 || x >= w || y >= h) continue;
+            if (Math.abs(dx) + Math.abs(dy) > radius) continue; // 菱形擴散，邊緣自然收束
+            if (Math.random() < 0.25) continue; // 打散邊界，避免整齊方塊
+            if (nearCapital(x, y)) continue;
+            mapState.tiles[M.tileKey(x, y)].terrain = terrain;
+          }
+        }
+      }
+    }
+
+    sprinkle('mountain', 6, 2);
+    sprinkle('forest', 8, 2);
+    sprinkle('water', 4, 1);
+
+    // 關隘：每對首都連線中點附近最近的一座城池（5 格內）升格為關隘。
+    for (let i = 0; i < capitals.length; i++) {
+      for (let j = i + 1; j < capitals.length; j++) {
+        const mid = { x: Math.round((capitals[i].x + capitals[j].x) / 2), y: Math.round((capitals[i].y + capitals[j].y) / 2) };
+        let best = null, bestD = Infinity;
+        Object.values(mapState.tiles).forEach((t) => {
+          if (t.type !== 'city' || t.terrain === 'pass') return;
+          const d = U.tileDistance(mid, t);
+          if (d < bestD) { bestD = d; best = t; }
+        });
+        if (best && bestD <= 5) {
+          best.terrain = 'pass';
+          best.guardPower = Math.round((best.guardPower || 80) * 1.5);
+        }
+      }
+    }
   }
 
   function shuffle(arr) {

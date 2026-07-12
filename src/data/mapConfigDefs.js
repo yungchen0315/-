@@ -20,5 +20,32 @@
     tileSizePx: 64
   };
 
+  /**
+   * @typedef {Object} TerrainDef
+   * @property {string} name 顯示名稱。
+   * @property {number} defBonusPct 在此地形上防守時，守方防禦力的百分比加成。
+   * @property {number} marchMul 向此地形行軍時的耗時倍率（1 = 不影響）。
+   */
+
+  /**
+   * 地形靜態表：地形影響戰鬥（守方防禦加成）與行軍（耗時倍率）。
+   * 關隘為山地要衝的特殊據點地形，一夫當關、易守難攻。
+   * @type {Object<string,TerrainDef>}
+   */
+  const TERRAIN_DEFS = {
+    plain: { name: '平原', defBonusPct: 0, marchMul: 1 },
+    forest: { name: '森林', defBonusPct: 10, marchMul: 1.25 },
+    mountain: { name: '山地', defBonusPct: 25, marchMul: 1.5 },
+    water: { name: '水域', defBonusPct: 15, marchMul: 1.25 },
+    pass: { name: '關隘', defBonusPct: 40, marchMul: 1.5 }
+  };
+
+  /** 取得某格的地形定義；舊存檔沒有 terrain 欄位時一律視為平原。 */
+  function terrainDefOf(tile) {
+    return TERRAIN_DEFS[(tile && tile.terrain) || 'plain'] || TERRAIN_DEFS.plain;
+  }
+
   window.Game.Data.MAP_CONFIG = MAP_CONFIG;
+  window.Game.Data.TERRAIN_DEFS = TERRAIN_DEFS;
+  window.Game.Data.terrainDefOf = terrainDefOf;
 })();

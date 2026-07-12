@@ -74,6 +74,7 @@
       if (!Array.isArray(p.learnedTactics)) p.learnedTactics = [];
     });
     if (!saveGame.activeBattles) saveGame.activeBattles = {};
+    Object.values((saveGame.map && saveGame.map.tiles) || {}).forEach((t) => { if (!t.terrain) t.terrain = 'plain'; });
   }
 
   function startFresh(factionId) {

@@ -129,8 +129,35 @@
 
   const GRASS_SHADES = ['#3f6b45', '#456f4a', '#3a6440', '#4a7550'];
   const REGION_TINT = { shu: '#3aa15c', wei: '#3a6bb0', wu: '#c0392b' };
+  // 各地形的底色（平原沿用草地深淺）與空地上的小圖示。
+  const TERRAIN_FILL = {
+    forest: ['#2f5936', '#345f3b', '#2a5231'],
+    mountain: ['#6b6257', '#736a5e', '#5f574d'],
+    water: ['#3a6a8f', '#3f7096', '#356383'],
+    pass: ['#4a4038', '#524740']
+  };
+  const TERRAIN_GLYPH = { forest: '🌲', mountain: '⛰️', water: '', pass: '' };
 
   function drawTerrain(ctx, tile, sx, sy, size) {
+    const terrain = tile.terrain && tile.terrain !== 'plain' ? tile.terrain : null;
+    if (terrain && TERRAIN_FILL[terrain]) {
+      const fills = TERRAIN_FILL[terrain];
+      ctx.fillStyle = fills[Math.floor(hashTile(tile.x, tile.y, 1) * fills.length)];
+      ctx.fillRect(sx, sy, size, size);
+      if (tile.type === 'empty' && TERRAIN_GLYPH[terrain]) {
+        drawGlyph(ctx, TERRAIN_GLYPH[terrain], sx, sy, 0.34, '#dfe8dc');
+      }
+      // 水面波紋。
+      if (terrain === 'water' && hashTile(tile.x, tile.y, 5) < 0.5) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(sx + size * 0.2, sy + size * 0.55);
+        ctx.quadraticCurveTo(sx + size * 0.5, sy + size * 0.45, sx + size * 0.8, sy + size * 0.55);
+        ctx.stroke();
+      }
+      return;
+    }
     const shadeIdx = Math.floor(hashTile(tile.x, tile.y, 1) * GRASS_SHADES.length);
     ctx.fillStyle = GRASS_SHADES[shadeIdx];
     ctx.fillRect(sx, sy, size, size);
@@ -332,6 +359,13 @@
     if (!tile || tile.type === 'empty') { panel.appendChild(U.el('div', 'emptyHint', '此處為空地')); return; }
 
     panel.appendChild(U.el('div', 'panelTitle', tile.name || '未知地點'));
+
+    // 地形標示：非平原地形顯示守方防禦加成與行軍耗時影響。
+    if (tile.terrain && tile.terrain !== 'plain') {
+      const tdef = D.terrainDefOf(tile);
+      panel.appendChild(U.el('div', 'subHint', (tile.terrain === 'pass' ? '⛩ ' : '') + '地形：' + tdef.name +
+        '（守方防禦 +' + tdef.defBonusPct + '%、行軍耗時 ×' + tdef.marchMul + '）'));
+    }
 
     // 地圖上的戰鬥平時完全看不到動畫，只有這格「當下」正有戰鬥在進行（地圖上會顯示交戰標記）
     // 時，點進來才會出現觀戰按鈕；戰鬥一結算完，這個按鈕就會跟著消失。
