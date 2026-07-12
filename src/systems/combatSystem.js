@@ -350,12 +350,12 @@
     });
     const win = result.winner === 'attacker';
     const resultText = win
-      ? '成功襲擾 ' + D.factionDefById(tile.ownerFactionId).name + ' 主城，掠奪資源並重創守軍。'
+      ? '攻陷 ' + D.factionDefById(tile.ownerFactionId).name + ' 主城「' + tile.name + '」，' + D.factionDefById(tile.ownerFactionId).name + ' 勢力滅亡！'
       : '進攻 ' + D.factionDefById(tile.ownerFactionId).name + ' 主城失利，部隊損失慘重。';
     return {
       kind: 'capital', attackerFactionId: playerState.factionId, defenderFactionId: tile.ownerFactionId,
       targetName: tile.name, purpose: army.purpose,
-      title: '襲擾「' + tile.name + '」', attackerHeroStateId: army.heroStateId, attackerSubHeroStateIds: (army.subHeroStateIds || []).slice(), attackerUnitsBefore,
+      title: '進攻「' + tile.name + '」', attackerHeroStateId: army.heroStateId, attackerSubHeroStateIds: (army.subHeroStateIds || []).slice(), attackerUnitsBefore,
       defenderHeroStateId, defenderSubHeroStateIds, defenderUnitsBefore: defUnits, defenderName: D.factionDefById(tile.ownerFactionId).name + ' 守軍',
       timeline: result.timeline, win, resultText, result
     };
@@ -545,17 +545,26 @@
       purpose: rec.purpose, time: now, losses, text: rec.resultText
     };
     if (rec.win) {
+      // 攻陷主城＝滅其勢力：城中積蓄盡數掠奪、主城易主、守方全軍潰散並標記滅亡。
+      // 該勢力殘餘的城池與土地仍保留原色，可再逐一攻取（殘餘勢力）。
       const plunderMul = 1 + (rec.result.attackerLootBonusPct || 0) / 100;
       const plunder = {};
       D.RESOURCE_TYPES.forEach((r) => {
-        const take = Math.round((defender.resources[r] || 0) * 0.15 * plunderMul);
+        const take = Math.round((defender.resources[r] || 0) * 0.5 * plunderMul);
         plunder[r] = take; defender.resources[r] -= take; attackerState.resources[r] += take;
       });
-      const garrison = Object.values(defender.armies).filter((a) => a.status === 'garrison');
-      garrison.forEach((a) => { const c = applyCasualties(a.units, rec.result.defenderLossRate); a.units = c.remaining; });
+      const capitalTile = saveGame.map.tiles[rec.tileId];
+      if (capitalTile) capitalTile.ownerFactionId = rec.attackerFactionId;
+      Object.values(defender.armies).forEach((a) => {
+        a.units = {};
+        a.status = 'garrison';
+        a.targetTileId = null;
+        a.purpose = null;
+      });
+      defender.defeated = true;
       battle.outcome = 'win';
       battle.loot = plunder;
-      awardSquadExp(attackerState, army, 60);
+      awardSquadExp(attackerState, army, 150);
     } else {
       battle.outcome = 'lose';
     }

@@ -18,6 +18,10 @@
    * @property {number} nextAiTickAt AI 勢力下一次決策排程的時間戳。
    * @property {string} activeScreenId 目前選中的畫面分頁 id（純 UI 狀態，但為了讓玩家
    *   下次開遊戲回到同一畫面，一併存進存檔）。
+   * @property {{result:'victory'|'defeat', at:number, acknowledged:boolean}} [outcome]
+   *   天下大勢的最終結局：玩家滅盡所有 AI 勢力＝victory（天下統一），玩家主城被攻陷＝
+   *   defeat（敗亡）。由 gameLoopSystem.checkWorldOutcome 判定一次後寫入，bootstrap
+   *   據此顯示結局畫面（acknowledged 記錄玩家是否已看過，避免重複跳出）。
    * @property {Object<string,Object>} activeBattles 以地圖 tile id（"x_y"）為 key，記錄該格
    *   「目前正在進行中」的地圖戰鬥（見 combatSystem.resolveArmyArrival／resolveActiveBattles）：
    *   部隊抵達目標後不會立即結算，而是先登記一場進行中的戰鬥，地圖上會顯示交戰標記，
