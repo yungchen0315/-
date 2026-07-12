@@ -423,12 +423,21 @@
       itemDropId = dropped.id;
       resultText += ' 並拾獲「' + dropped.name + '」。';
     }
+    // 掉落兵書：習得一個尚未學會的獨立戰法，擴充可搭配的戰法庫。
+    let tacticDropId = null;
+    if (win && Math.random() < 0.25) {
+      const learnable = D.STANDALONE_TACTICS.filter((t) => (playerState.learnedTactics || []).indexOf(t.id) < 0);
+      if (learnable.length) {
+        tacticDropId = U.choice(learnable).id;
+        resultText += ' 並習得戰法「' + D.tacticDefById(tacticDropId).name + '」。';
+      }
+    }
     return {
       kind: 'monster', attackerFactionId: playerState.factionId,
       targetName: tile.name, purpose: army.purpose,
       title: '討伐「' + tile.name + '」', attackerHeroStateId: army.heroStateId, attackerSubHeroStateIds: (army.subHeroStateIds || []).slice(), attackerUnitsBefore,
       defenderHeroStateId: null, defenderSubHeroStateIds: [], defenderUnitsBefore, defenderName: tile.name,
-      timeline: result.timeline, win, resultText, result, itemDropId
+      timeline: result.timeline, win, resultText, result, itemDropId, tacticDropId
     };
   }
 
@@ -605,6 +614,7 @@
       battle.outcome = 'win';
       battle.loot = loot;
       if (rec.itemDropId) { window.Game.Systems.Hero.grantItem(attackerState, rec.itemDropId, 1); battle.itemDrop = D.itemDefById(rec.itemDropId).name; }
+      if (rec.tacticDropId) { window.Game.Systems.Hero.learnTactic(attackerState, rec.tacticDropId); battle.tacticDrop = D.tacticDefById(rec.tacticDropId).name; }
       awardSquadExp(attackerState, army, 30);
     } else {
       battle.outcome = 'lose';

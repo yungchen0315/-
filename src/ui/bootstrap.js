@@ -71,6 +71,7 @@
       Object.values(p.heroes || {}).forEach((hero) => {
         if (!Array.isArray(hero.tactics)) hero.tactics = [];
       });
+      if (!Array.isArray(p.learnedTactics)) p.learnedTactics = [];
     });
     if (!saveGame.activeBattles) saveGame.activeBattles = {};
   }

@@ -165,11 +165,28 @@
     return set;
   }
 
-  /** 某武將此刻可裝配的戰法：來源武將在陣中、尚未被任何武將占用、且來源不是自己。 */
+  /** 玩家是否「持有」某戰法：招牌戰法需擁有來源武將；獨立戰法需已習得（learnedTactics）。 */
+  function ownsTactic(playerState, tacticId) {
+    const t = D.tacticDefById(tacticId);
+    if (!t) return false;
+    if (t.sourceHeroId) return !!playerState.heroes[t.sourceHeroId];
+    return (playerState.learnedTactics || []).indexOf(tacticId) >= 0;
+  }
+
+  /** 習得一個獨立戰法（擊破據點掉落／獎勵）。回傳是否為新習得。 */
+  function learnTactic(playerState, tacticId) {
+    if (!D.isStandaloneTactic || !D.isStandaloneTactic(tacticId)) return false;
+    if (!Array.isArray(playerState.learnedTactics)) playerState.learnedTactics = [];
+    if (playerState.learnedTactics.indexOf(tacticId) >= 0) return false;
+    playerState.learnedTactics.push(tacticId);
+    return true;
+  }
+
+  /** 某武將此刻可裝配的戰法：持有該戰法、尚未被任何武將占用、且來源不是自己。 */
   function availableTacticsForHero(playerState, heroDataId) {
     const equipped = equippedTacticIds(playerState);
     return (D.TACTIC_DEFS || []).filter((t) =>
-      playerState.heroes[t.sourceHeroId] && t.sourceHeroId !== heroDataId && !equipped.has(t.id));
+      ownsTactic(playerState, t.id) && t.sourceHeroId !== heroDataId && !equipped.has(t.id));
   }
 
   function equipTactic(playerState, heroDataId, tacticId) {
@@ -178,7 +195,7 @@
     if (!Array.isArray(hs.tactics)) hs.tactics = [];
     const t = D.tacticDefById(tacticId);
     if (!t) return { ok: false, reason: '未知戰法' };
-    if (!playerState.heroes[t.sourceHeroId]) return { ok: false, reason: '尚未擁有此戰法的來源武將' };
+    if (!ownsTactic(playerState, tacticId)) return { ok: false, reason: '尚未擁有此戰法' };
     if (t.sourceHeroId === heroDataId) return { ok: false, reason: '此為該武將的自帶戰法，無需再裝配' };
     if (hs.tactics.indexOf(tacticId) >= 0) return { ok: true };
     if (hs.tactics.length >= TACTIC_SLOTS) return { ok: false, reason: '戰法欄位已滿（最多 ' + TACTIC_SLOTS + ' 個）' };
@@ -199,6 +216,6 @@
     expNeededForLevel, effectiveStats, leadershipCap, awardExp,
     ownedHeroDataIds, unlockHeroFromMission, equipItem, unequipItem, grantItem,
     squadHeroIds, armyLeadershipCap, assignHeroToArmy, removeHeroFromArmy, unassignHero,
-    equippedTacticIds, availableTacticsForHero, equipTactic, unequipTactic
+    equippedTacticIds, ownsTactic, learnTactic, availableTacticsForHero, equipTactic, unequipTactic
   };
 })();

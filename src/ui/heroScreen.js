@@ -52,6 +52,33 @@
     body.appendChild(row);
   }
 
+  /** 戰法庫總覽：列出玩家目前擁有的全部戰法（招牌＋已習得獨立），顯示效果與裝配狀態。 */
+  function buildTacticLibraryPanel(playerState) {
+    const Hero = window.Game.Systems.Hero;
+    const panel = U.el('div', 'panel');
+    const owned = (D.TACTIC_DEFS || []).filter((t) => Hero.ownsTactic(playerState, t.id));
+    panel.appendChild(U.el('div', 'panelTitle', '戰法庫（' + owned.length + ' / ' + (D.TACTIC_DEFS || []).length + ' 種）'));
+    panel.appendChild(U.el('div', 'subHint', '獨立戰法靠擊破據點掉落兵書習得；招牌戰法擁有該武將即可傳授。於上方各武將卡裝配（每名武將最多 ' + Hero.TACTIC_SLOTS + ' 個）。'));
+
+    // 建立「戰法 -> 目前裝配在哪位武將」對照。
+    const equippedOn = {};
+    Object.values(playerState.heroes).forEach((h) => (h.tactics || []).forEach((tid) => { equippedOn[tid] = h.heroDataId; }));
+
+    owned.slice().sort((a, b) => (b.rarity - a.rarity) || a.name.localeCompare(b.name)).forEach((t) => {
+      const row = U.el('div', 'tacticLibRow');
+      const star = U.el('span', 'tacticLibStar', '★' + t.rarity);
+      row.appendChild(star);
+      row.appendChild(U.el('span', 'tacticLibName', t.name));
+      row.appendChild(U.el('span', 'tacticLibEff', D.describeSkillEffects(t.effects)));
+      const wearer = equippedOn[t.id];
+      row.appendChild(U.el('span', 'tacticLibState' + (wearer ? ' tacticLibEquipped' : ''),
+        wearer ? '裝於 ' + (D.heroDefById(wearer) || {}).name : (t.sourceHeroId ? '招牌' : '可裝配')));
+      panel.appendChild(row);
+    });
+    if (owned.length === 0) panel.appendChild(U.el('div', 'emptyHint', '尚無戰法，擊破據點可掉落兵書習得。'));
+    return panel;
+  }
+
   function render(container, saveGame, playerState) {
     U.clearNode(container);
     const Hero = window.Game.Systems.Hero;
@@ -105,6 +132,8 @@
     if (heroList.length === 0) rosterListEl.appendChild(U.el('div', 'emptyHint', '尚無武將，請完成戰役解鎖，或前往「招募」分頁在酒館招募。'));
     rosterPanel.appendChild(rosterListEl);
     container.appendChild(rosterPanel);
+
+    container.appendChild(buildTacticLibraryPanel(playerState));
 
     const invPanel = U.el('div', 'panel');
     invPanel.appendChild(U.el('div', 'panelTitle', '裝備庫（戰役獎勵／擊破據點取得）'));

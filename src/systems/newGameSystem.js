@@ -41,6 +41,9 @@
     const humanPlayer = saveGame.players[humanId];
     window.Game.Systems.Mission.refreshMissionStatuses(humanPlayer);
 
+    // 開局贈送幾個基礎獨立戰法，讓玩家一開始就能體驗戰法搭配（其餘靠擊破據點掉落習得）。
+    humanPlayer.learnedTactics = ['st_fenzhan', 'st_tiebi', 'st_taolue', 'st_lueduo'];
+
     const starterHeroId = STARTER_HERO_BY_FACTION[humanId];
     humanPlayer.heroes[starterHeroId] = M.createHeroState(starterHeroId);
     const starterArmy = M.createArmyState(humanId, '主力部隊', { infantry: 10 });
