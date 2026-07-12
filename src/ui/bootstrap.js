@@ -135,9 +135,41 @@
     window.addEventListener('beforeunload', () => window.Game.Systems.Save.saveToLocalStorage(window.GameSave));
   }
 
+  // 結局畫面：天下統一／敗亡。只在 outcome 尚未被玩家看過時顯示一次。
+  let outcomeOverlayOpen = false;
+  function maybeShowOutcome() {
+    const outcome = window.GameSave.outcome;
+    if (!outcome || outcome.acknowledged || outcomeOverlayOpen) return;
+    outcomeOverlayOpen = true;
+    const win = outcome.result === 'victory';
+    const overlay = U.el('div', 'confirmOverlay');
+    const box = U.el('div', 'confirmBox outcomeBox');
+    box.appendChild(U.el('div', 'outcomeTitle' + (win ? ' outcomeTitleWin' : ' outcomeTitleLose'), win ? '天下統一' : '江山傾覆'));
+    box.appendChild(U.el('div', 'confirmMessage', win
+      ? '三分歸一統！你已攻陷所有敵對勢力的主城，亂世至此平定，天下盡歸你手。'
+      : '主城陷落，社稷傾覆……你的勢力已然敗亡。可重新開始，再爭天下。'));
+    const btnRow = U.el('div', 'confirmBtnRow');
+    if (win) {
+      const okBtn = U.el('button', 'setupBtn confirmOkBtn', '繼續遊玩');
+      U.onTap(okBtn, () => { outcome.acknowledged = true; window.Game.Systems.Save.saveToLocalStorage(window.GameSave); document.body.removeChild(overlay); outcomeOverlayOpen = false; });
+      btnRow.appendChild(okBtn);
+    } else {
+      const watchBtn = U.el('button', 'setupBtn confirmCancelBtn', '繼續觀望');
+      U.onTap(watchBtn, () => { outcome.acknowledged = true; window.Game.Systems.Save.saveToLocalStorage(window.GameSave); document.body.removeChild(overlay); outcomeOverlayOpen = false; });
+      const restartBtn = U.el('button', 'setupBtn confirmOkBtn', '重新開始');
+      U.onTap(restartBtn, () => { window.Game.Systems.Save.deleteSave(); location.reload(); });
+      btnRow.appendChild(watchBtn);
+      btnRow.appendChild(restartBtn);
+    }
+    box.appendChild(btnRow);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+  }
+
   function gameTick() {
     if (!window.GameSave) return;
     window.Game.Systems.GameLoop.advanceTime(window.GameSave, U.now());
+    maybeShowOutcome();
     window.Game.UI.TopBar.refresh(humanPlayer());
     const screen = window.GameSave.activeScreenId;
     if (screen === 'city' || screen === 'army' || screen === 'hero' || screen === 'map' || screen === 'gacha') {

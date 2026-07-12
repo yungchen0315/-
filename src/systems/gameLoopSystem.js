@@ -15,6 +15,7 @@
   function advanceTime(saveGame, now) {
     Object.values(saveGame.players).forEach((playerState) => tickPlayer(saveGame, playerState, now));
     window.Game.Systems.Combat.resolveActiveBattles(saveGame, now);
+    checkWorldOutcome(saveGame, now);
 
     let iterations = 0;
     while (now >= saveGame.nextAiTickAt && iterations < AI_TICK_MAX_CATCHUP) {
@@ -28,6 +29,7 @@
   }
 
   function tickPlayer(saveGame, playerState, now) {
+    if (playerState.defeated) return; // 已滅亡的勢力停止一切生產與行動。
     window.Game.Systems.Economy.tick(saveGame, playerState, now);
     Object.values(playerState.cities).forEach((city) => {
       window.Game.Systems.CityBuilding.resolveUpgrades(city, now);
@@ -41,5 +43,24 @@
     window.Game.Systems.Gacha.tickDailyReward(playerState, now);
   }
 
-  window.Game.Systems.GameLoop = { advanceTime };
+  /**
+   * 天下大勢判定：玩家主城被攻陷＝敗亡；所有 AI 勢力滅亡＝天下統一。
+   * 只判定一次（saveGame.outcome 寫入後不再改變），由 bootstrap 顯示結局畫面。
+   */
+  function checkWorldOutcome(saveGame, now) {
+    if (saveGame.outcome) return;
+    const players = Object.values(saveGame.players);
+    const human = players.find((p) => p.isHuman);
+    if (!human) return;
+    if (human.defeated) {
+      saveGame.outcome = { result: 'defeat', at: now, acknowledged: false };
+      return;
+    }
+    const ais = players.filter((p) => !p.isHuman);
+    if (ais.length && ais.every((p) => p.defeated)) {
+      saveGame.outcome = { result: 'victory', at: now, acknowledged: false };
+    }
+  }
+
+  window.Game.Systems.GameLoop = { advanceTime, checkWorldOutcome };
 })();

@@ -366,6 +366,13 @@ button, .navBtn, select {
   width: 100%;
 }
 .confirmMessage { font-size: 14px; color: #eee6d3; margin-bottom: 18px; text-align: center; line-height: 1.5; }
+.outcomeBox { border: 2px solid #7a5c2e; }
+.outcomeTitle {
+  text-align: center; font-size: 30px; font-weight: 900; letter-spacing: 6px; margin-bottom: 12px;
+  font-family: 'KaiTi', 'STKaiti', 'DFKai-SB', serif;
+}
+.outcomeTitleWin { color: #ffd75e; text-shadow: 0 0 14px rgba(224,178,90,0.6); }
+.outcomeTitleLose { color: #e2574d; text-shadow: 0 0 14px rgba(180,40,30,0.6); }
 .confirmBtnRow { display: flex; gap: 10px; }
 .confirmBtnRow .setupBtn { flex: 1 1 0; width: auto; margin: 0; padding: 11px; font-size: 14px; }
 .confirmCancelBtn { background: #3a3a3a; color: #ddd; }

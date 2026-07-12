@@ -34,6 +34,8 @@
    * @property {Object<string,number>} inventory 未裝備的道具庫存，以 ItemDef.id 為 key。
    * @property {string[]} learnedTactics 已習得的獨立戰法 id（見 src/data/tacticDefs.js 的
    *   STANDALONE_TACTICS）；招牌戰法靠擁有來源武將取得，不記在這裡。
+   * @property {boolean} [defeated] 主城被攻陷後標記為 true：勢力滅亡，停止一切生產、
+   *   決策與行動；殘餘城池與土地保留原色、可被其他勢力逐一攻取。
    * @property {Object<string,TechnologyState>} technologies 以 TechnologyDef.id 為 key。
    * @property {Object<string,MissionState>} missions 以 MissionDef.id 為 key
    *   （AI 勢力目前不會有進度，但形狀保持一致，方便日後如果要給 AI 也接上劇情）。

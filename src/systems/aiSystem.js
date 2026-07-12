@@ -10,7 +10,7 @@
 
   function tick(saveGame, now) {
     Object.values(saveGame.players).forEach((playerState) => {
-      if (!playerState.isHuman) runAiPlayer(saveGame, playerState, now);
+      if (!playerState.isHuman && !playerState.defeated) runAiPlayer(saveGame, playerState, now);
     });
   }
 
@@ -90,7 +90,7 @@
     const ownRebelCities = cityCandidates.filter((t) => t.homeFactionId === playerState.factionId && !t.ownerFactionId);
 
     const player = Object.values(saveGame.players).find((p) => p.isHuman);
-    if (player) {
+    if (player && !player.defeated) {
       const playerPower = Econ.computePower(player);
       const playerCap = Map.capitalTileOf(saveGame.map, player.factionId);
       const canAttackPlayer = myPower > playerPower * 1.4 && Math.random() < 0.2 && playerCap && attackable.has(playerCap.id);
