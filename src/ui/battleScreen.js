@@ -284,6 +284,8 @@
       idx++;
       if (ev.type === 'skill') {
         showBanner('【' + ev.skillName + '】');
+      } else if (ev.type === 'bond') {
+        showBanner('⚡ ' + ev.bondType + '【' + ev.bondName + '】');
       } else if (ev.type === 'counter') {
         showBanner('⚔ 兵種相剋！' + (ev.side === 'attacker' ? '我軍' : defender.name) + '佔優');
       } else if (ev.type === 'attack') {

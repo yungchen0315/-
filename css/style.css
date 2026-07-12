@@ -216,6 +216,8 @@ button, .navBtn, select {
 .armyUnits { font-size: 13px; margin: 4px 0; }
 .armyGeneral { font-size: 12px; color: #bcae8f; margin-bottom: 4px; }
 .armySquadHint { font-size: 11px; color: #8f866f; margin-bottom: 6px; }
+.squadBondLine { font-size: 11px; color: #9be08a; margin: 2px 0; }
+.squadBondHint { font-size: 11px; color: #8a8070; margin: 2px 0; }
 .squadSlotRow { display: flex; align-items: center; gap: 6px; margin: 4px 0; }
 .squadSlotRole { flex: 0 0 auto; font-size: 10px; padding: 1px 6px; border-radius: 8px; background: rgba(224,178,90,0.18); color: #ffe08a; }
 .squadSlotName { flex: 1 1 auto; font-size: 12px; color: #d8cfb8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
