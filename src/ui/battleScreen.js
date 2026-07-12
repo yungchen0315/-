@@ -175,15 +175,33 @@
     pressurePanel.appendChild(pressureRow('統帥', attacker.cmd, defender.cmd));
     box.appendChild(pressurePanel);
 
-    // 沙場畫面：兩軍以小兵圖示實際排開，每回合攻方會朝中線衝刺、中線閃現交鋒
-    // 特效，被攻擊的一方畫面震動並依傷害比例減少存活的小兵圖示。
+    // 沙場畫面：繪製戰場背景（天空／遠山／城樓／地面，純 CSS 分層，無外部圖檔），
+    // 兩員大將於中央對衝、交鋒瞬間掃過金色衝擊光線並閃現技能大橫幅，後方兩軍小兵
+    // 方陣依傷害比例減少，被攻擊的一方震動。
     const stage = U.el('div', 'battleFieldStage');
+    const backdrop = U.el('div', 'battleBackdrop');
+    ['battleBackdropSky', 'battleBackdropMountains', 'battleBackdropFort', 'battleBackdropGround'].forEach((c) => backdrop.appendChild(U.el('div', c)));
+    stage.appendChild(backdrop);
+    // 後方兩軍小兵方陣（畫在大將身後）。
     const atkCluster = buildTokenCluster(opts.attackerUnitsBefore, 'battleArmyClusterLeft');
-    const impactSpark = U.el('div', 'battleImpactSpark', '💥');
     const defCluster = buildTokenCluster(opts.defenderUnitsBefore, 'battleArmyClusterRight');
     stage.appendChild(atkCluster.wrap);
-    stage.appendChild(impactSpark);
     stage.appendChild(defCluster.wrap);
+    // 金色衝擊光線。
+    const clashRays = U.el('div', 'battleClashRays');
+    stage.appendChild(clashRays);
+    // 中央對衝的兩員大將立繪（放大版程式頭像，左攻、右守鏡像）。
+    const atkFigure = U.el('div', 'battleStageHero battleStageHeroLeft');
+    atkFigure.appendChild(HP.heroPortraitEl(attacker.portraitDef, 'battleStagePortrait'));
+    const defFigure = U.el('div', 'battleStageHero battleStageHeroRight');
+    defFigure.appendChild(HP.heroPortraitEl(defender.portraitDef, 'battleStagePortrait battleStagePortraitFlip'));
+    stage.appendChild(atkFigure);
+    stage.appendChild(defFigure);
+    const impactSpark = U.el('div', 'battleImpactSpark', '💥');
+    stage.appendChild(impactSpark);
+    // 技能／相剋大橫幅（毛筆風金紅字，交鋒中央）。
+    const banner = U.el('div', 'battleStageBanner');
+    stage.appendChild(banner);
     box.appendChild(stage);
 
     const field = U.el('div', 'battleField');
@@ -228,13 +246,24 @@
       replay(flash, 'battleFlashPlay');
     }
 
-    /** 播放一次「攻方衝向中線→中線交鋒閃光→守方畫面震動」的沙場交戰動畫。 */
+    /** 技能／相剋／勝負用的中央大橫幅（氣派毛筆風金紅字）。 */
+    function showBanner(text) {
+      banner.textContent = text;
+      replay(banner, 'battleStageBannerPlay');
+    }
+
+    /** 播放一次「攻方大將與方陣衝向中線→金色衝擊光線掃過→守方震動」的沙場交戰動畫。 */
     function playClash(side) {
       const chargingCluster = side === 'attacker' ? atkCluster.wrap : defCluster.wrap;
       const hitCluster = side === 'attacker' ? defCluster.wrap : atkCluster.wrap;
+      const chargingHero = side === 'attacker' ? atkFigure : defFigure;
+      const hitHero = side === 'attacker' ? defFigure : atkFigure;
       replay(chargingCluster, 'battleCharging');
       replay(impactSpark, 'battleImpactPlay');
       replay(hitCluster, 'battleShaking');
+      replay(clashRays, 'battleClashRaysPlay');
+      replay(chargingHero, side === 'attacker' ? 'battleHeroLungeLeft' : 'battleHeroLungeRight');
+      replay(hitHero, 'battleHeroHit');
     }
 
     function renderResult() {
@@ -254,9 +283,9 @@
       const ev = timeline[idx];
       idx++;
       if (ev.type === 'skill') {
-        showFlash('【' + ev.skillName + '】');
+        showBanner('【' + ev.skillName + '】');
       } else if (ev.type === 'counter') {
-        showFlash('⚔ 兵種相剋！' + (ev.side === 'attacker' ? '我軍' : defender.name) + '佔優');
+        showBanner('⚔ 兵種相剋！' + (ev.side === 'attacker' ? '我軍' : defender.name) + '佔優');
       } else if (ev.type === 'attack') {
         turnLabel.textContent = '回合 ' + ev.turn;
         showFlash((ev.side === 'attacker' ? '我軍' : defender.name) + ' 造成 ' + ev.damage + ' 傷害');
@@ -269,7 +298,7 @@
         updateTokenLoss(defCluster.tokenEls, ev.defHpPct);
         defeatedCounter.textContent = '累計擊敗部隊：' + Math.round(defenderTotalQty * (1 - ev.defHpPct / 100)) + ' / ' + defenderTotalQty;
       } else if (ev.type === 'victory') {
-        showFlash(ev.side === 'attacker' ? '我軍獲勝！' : defender.name + ' 獲勝！');
+        showBanner(ev.side === 'attacker' ? '我軍獲勝！' : defender.name + ' 獲勝！');
       }
       if (idx >= timeline.length) {
         controls.style.display = 'none';
