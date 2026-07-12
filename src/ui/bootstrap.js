@@ -68,6 +68,9 @@
       Object.values(p.armies || {}).forEach((army) => {
         if (!Array.isArray(army.subHeroStateIds)) army.subHeroStateIds = [];
       });
+      Object.values(p.heroes || {}).forEach((hero) => {
+        if (!Array.isArray(hero.tactics)) hero.tactics = [];
+      });
     });
     if (!saveGame.activeBattles) saveGame.activeBattles = {};
   }

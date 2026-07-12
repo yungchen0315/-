@@ -17,14 +17,19 @@
    * combatBonusFor 與 UI 顯示（heroScreen.js 的數值說明）共用的同一份資料，
    * 不會有「說明寫的效果」跟「實際套用的效果」對不起來的情況。
    */
-  function applySkillEffects(bonus, heroDef, isDefender, isAttacker) {
-    if (!heroDef.skill || !heroDef.skill.effects) return;
-    heroDef.skill.effects.forEach((e) => {
+  /** 把一組 effects（武將技能或戰法共用同一份格式）套用到戰鬥加成上。 */
+  function applyEffects(bonus, effects, isDefender, isAttacker) {
+    if (!effects) return;
+    effects.forEach((e) => {
       if (e.when === 'attacking' && !isAttacker) return;
       if (e.when === 'defending' && !isDefender) return;
       if (e.stat === 'unitAtkPct') { bonus.unitAtkPct[e.unit] = (bonus.unitAtkPct[e.unit] || 0) + e.value; return; }
       bonus[e.stat] = (bonus[e.stat] || 0) + e.value;
     });
+  }
+
+  function applySkillEffects(bonus, heroDef, isDefender, isAttacker) {
+    if (heroDef.skill) applyEffects(bonus, heroDef.skill.effects, isDefender, isAttacker);
   }
 
   /** 技能＋已裝備物品的綜合戰鬥加成。playerState 為 null 時（例如劇情關卡的敵軍）只回傳空加成。 */
@@ -47,6 +52,13 @@
         if (e.lossReductionPct) bonus.lossReductionPct += e.lossReductionPct;
         if (e.lootBonusPct) bonus.lootBonusPct += e.lootBonusPct;
         if (e.unitAtkPct) Object.keys(e.unitAtkPct).forEach((r) => { bonus.unitAtkPct[r] = (bonus.unitAtkPct[r] || 0) + e.unitAtkPct[r]; });
+      });
+    }
+    // 已裝配的戰法：效果疊加在武將自帶技能之上（戰法效果與技能同一份格式）。
+    if (heroState && heroState.tactics) {
+      heroState.tactics.forEach((tid) => {
+        const t = D.tacticDefById(tid);
+        if (t) applyEffects(bonus, t.effects, !isAttacker, isAttacker);
       });
     }
     return bonus;
@@ -108,6 +120,19 @@
   const TURN_DEF_SOFTEN = 45;
   const MAX_TURNS = 10;
 
+  /** 開場為某一方全隊武將依序推入「自帶技能＋已裝配戰法」的技能事件，供動畫逐一閃現。 */
+  function pushSkillEvents(timeline, side, heroIds, playerState) {
+    heroIds.forEach((id) => {
+      const hd = D.heroDefById(id);
+      if (hd) timeline.push({ turn: 0, side, type: 'skill', skillName: hd.skill.name });
+      const hs = playerState && playerState.heroes && playerState.heroes[id];
+      ((hs && hs.tactics) || []).forEach((tid) => {
+        const t = D.tacticDefById(tid);
+        if (t) timeline.push({ turn: 0, side, type: 'skill', skillName: t.name });
+      });
+    });
+  }
+
   /**
    * 攻擊方 vs 守軍（守軍可為駐守部隊＋城防加成，也可為野外據點的固定守備力）。
    * 真正逐回合計算：雙方每回合互相扣減 HP 池，直到一方歸零或達到回合上限；
@@ -149,15 +174,9 @@
     let defHpPool = defHpMax;
 
     const timeline = [];
-    // 開場依序播放全隊每位武將的技能，讓多武將編隊的每個戰法都在動畫上現身。
-    attackerHeroIds.forEach((id) => {
-      const hd = D.heroDefById(id);
-      if (hd) timeline.push({ turn: 0, side: 'attacker', type: 'skill', skillName: hd.skill.name });
-    });
-    defenderHeroIds.forEach((id) => {
-      const hd = D.heroDefById(id);
-      if (hd) timeline.push({ turn: 0, side: 'defender', type: 'skill', skillName: hd.skill.name });
-    });
+    // 開場依序播放全隊每位武將的自帶技能與已裝配的戰法，讓多武將編隊的每個戰法都在動畫上現身。
+    pushSkillEvents(timeline, 'attacker', attackerHeroIds, attackerPlayerState);
+    pushSkillEvents(timeline, 'defender', defenderHeroIds, defenderPlayerState);
 
     let turn = 0;
     let winner = null;

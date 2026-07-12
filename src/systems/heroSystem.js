@@ -151,10 +151,54 @@
     return { ok: true };
   }
 
+  /* ------------------------------------------------------------------------
+   * 戰法：每名武將除了自帶技能，還能再裝配 TACTIC_SLOTS 個「已擁有武將傳授的招牌
+   * 戰法」（來源武將須在陣中）。一份戰法只有一份、同時只能裝在一名武將身上，且不能
+   * 裝回牠自己的來源武將（來源武將已自帶）。戰鬥效果的疊加在 combatSystem 處理。
+   * ------------------------------------------------------------------------ */
+  const TACTIC_SLOTS = 2;
+
+  /** 全陣營目前已被裝配（占用）的戰法 id 集合，用於「一份戰法只能裝一處」的判定。 */
+  function equippedTacticIds(playerState) {
+    const set = new Set();
+    Object.values(playerState.heroes).forEach((h) => (h.tactics || []).forEach((id) => set.add(id)));
+    return set;
+  }
+
+  /** 某武將此刻可裝配的戰法：來源武將在陣中、尚未被任何武將占用、且來源不是自己。 */
+  function availableTacticsForHero(playerState, heroDataId) {
+    const equipped = equippedTacticIds(playerState);
+    return (D.TACTIC_DEFS || []).filter((t) =>
+      playerState.heroes[t.sourceHeroId] && t.sourceHeroId !== heroDataId && !equipped.has(t.id));
+  }
+
+  function equipTactic(playerState, heroDataId, tacticId) {
+    const hs = playerState.heroes[heroDataId];
+    if (!hs) return { ok: false, reason: '找不到武將' };
+    if (!Array.isArray(hs.tactics)) hs.tactics = [];
+    const t = D.tacticDefById(tacticId);
+    if (!t) return { ok: false, reason: '未知戰法' };
+    if (!playerState.heroes[t.sourceHeroId]) return { ok: false, reason: '尚未擁有此戰法的來源武將' };
+    if (t.sourceHeroId === heroDataId) return { ok: false, reason: '此為該武將的自帶戰法，無需再裝配' };
+    if (hs.tactics.indexOf(tacticId) >= 0) return { ok: true };
+    if (hs.tactics.length >= TACTIC_SLOTS) return { ok: false, reason: '戰法欄位已滿（最多 ' + TACTIC_SLOTS + ' 個）' };
+    if (equippedTacticIds(playerState).has(tacticId)) return { ok: false, reason: '此戰法已裝配在其他武將身上' };
+    hs.tactics.push(tacticId);
+    return { ok: true };
+  }
+
+  function unequipTactic(playerState, heroDataId, tacticId) {
+    const hs = playerState.heroes[heroDataId];
+    if (!hs || !Array.isArray(hs.tactics)) return { ok: false, reason: '找不到武將' };
+    hs.tactics = hs.tactics.filter((id) => id !== tacticId);
+    return { ok: true };
+  }
+
   window.Game.Systems.Hero = {
-    SQUAD_SUB_MAX,
+    SQUAD_SUB_MAX, TACTIC_SLOTS,
     expNeededForLevel, effectiveStats, leadershipCap, awardExp,
     ownedHeroDataIds, unlockHeroFromMission, equipItem, unequipItem, grantItem,
-    squadHeroIds, armyLeadershipCap, assignHeroToArmy, removeHeroFromArmy, unassignHero
+    squadHeroIds, armyLeadershipCap, assignHeroToArmy, removeHeroFromArmy, unassignHero,
+    equippedTacticIds, availableTacticsForHero, equipTactic, unequipTactic
   };
 })();

@@ -172,6 +172,12 @@ button, .navBtn, select {
 .equipLine { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .equipChip { font-size: 11px; background: rgba(0,0,0,0.25); color: #8a8070; padding: 3px 8px; border-radius: 10px; }
 .equipChip.equipChipFilled { background: rgba(224,178,90,0.2); color: #e0b25a; }
+.tacticLine { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.tacticChip { font-size: 11px; background: rgba(120,90,180,0.16); color: #cdbcf0; padding: 3px 8px; border-radius: 10px; }
+.tacticChip.tacticChipInnate { background: rgba(224,178,90,0.15); color: #ffe08a; }
+.tacticChip.tacticChipFilled { cursor: pointer; }
+.tacticEquipRow { display: flex; gap: 6px; margin-top: 6px; }
+.tacticEquipRow .armySelect { flex: 1 1 auto; }
 .exploreRow, .exploreTargetRow, .queueRow, .campaignFightRow {
   display: flex; justify-content: space-between; align-items: center;
   padding: 6px 0; border-top: 1px solid rgba(255,255,255,0.06);
