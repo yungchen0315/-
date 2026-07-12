@@ -46,7 +46,38 @@
 
   function itemDefById(id) { return ITEM_DEFS.find((i) => i.id === id); }
 
+  const ITEM_EFFECT_LABELS = {
+    atkPct: '全軍攻擊', defPct: '全軍防禦', hpPct: '全軍生命上限',
+    lootBonusPct: '戰利品', intelPct: '智力'
+  };
+
+  /** 產生裝備的實際作用說明文字，例如「全軍攻擊 +16%、步兵攻擊 +6%」。與戰鬥／屬性實際套用同一份資料。 */
+  function describeItemEffect(item) {
+    if (!item || !item.effect) return '';
+    const e = item.effect;
+    const parts = [];
+    Object.keys(e).forEach((k) => {
+      const v = e[k];
+      if (k === 'unitAtkPct') {
+        Object.keys(v).forEach((role) => {
+          const label = (window.Game.Data.ROLE_LABELS && window.Game.Data.ROLE_LABELS[role]) || role;
+          parts.push(label + '攻擊 +' + v[role] + '%');
+        });
+      } else if (k === 'lossReductionPct') {
+        parts.push('我軍傷亡降低 ' + v + '%');
+      } else if (k === 'cmdPct') {
+        parts.push('統率 +' + v + '%（提升帶兵上限）');
+      } else if (k === 'speedBonus') {
+        parts.push('行軍速度 +' + v);
+      } else {
+        parts.push((ITEM_EFFECT_LABELS[k] || k) + ' +' + v + '%');
+      }
+    });
+    return parts.join('、');
+  }
+
   window.Game.Data.ITEM_SLOTS = ITEM_SLOTS;
   window.Game.Data.ITEM_DEFS = ITEM_DEFS;
   window.Game.Data.itemDefById = itemDefById;
+  window.Game.Data.describeItemEffect = describeItemEffect;
 })();

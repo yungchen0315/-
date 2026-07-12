@@ -28,9 +28,21 @@
     return speeds.length ? Math.min(...speeds) : 5;
   }
 
-  function marchDurationMs(army, distanceTiles) {
-    const speed = slowestSpeed(army) || 5;
+  function marchDurationMs(army, distanceTiles, speedBonus) {
+    const speed = (slowestSpeed(army) || 5) + (speedBonus || 0);
     return Math.round(distanceTiles * MARCH_MS_PER_TILE * (5 / speed));
+  }
+
+  /** 部隊全隊武將已裝備坐騎提供的行軍速度加成（讓坐騎的 speedBonus 實際生效）。 */
+  function armySpeedBonus(playerState, army) {
+    const ids = [army.heroStateId].concat(army.subHeroStateIds || []).filter(Boolean);
+    let bonus = 0;
+    ids.forEach((id) => {
+      const hs = playerState.heroes[id];
+      const mount = hs && hs.equipment && hs.equipment.mount && D.itemDefById(hs.equipment.mount);
+      if (mount && mount.effect && mount.effect.speedBonus) bonus += mount.effect.speedBonus;
+    });
+    return bonus;
   }
 
   function primaryCity(playerState) { return Object.values(playerState.cities)[0]; }
@@ -95,7 +107,7 @@
     const city = primaryCity(playerState);
     const origin = { x: city.tileX, y: city.tileY };
     const dist = U.tileDistance(origin, targetTile) || 1;
-    const travel = marchDurationMs(army, dist);
+    const travel = marchDurationMs(army, dist, armySpeedBonus(playerState, army));
     army.status = 'marching';
     army.departAt = now;
     army.arriveAt = now + travel;
@@ -114,7 +126,7 @@
       target = { x: parseInt(parts[0], 10), y: parseInt(parts[1], 10) };
     }
     const dist = U.tileDistance(origin, target) || 1;
-    const travel = marchDurationMs(army, dist);
+    const travel = marchDurationMs(army, dist, armySpeedBonus(playerState, army));
     army.status = 'returning';
     army.departAt = now;
     army.arriveAt = now + travel;
@@ -182,7 +194,7 @@
 
   window.Game.Systems.Army = {
     MARCH_MS_PER_TILE,
-    unitCount, leadershipUsed, leadershipUsedByFaction, slowestSpeed, marchDurationMs,
+    unitCount, leadershipUsed, leadershipUsedByFaction, slowestSpeed, marchDurationMs, armySpeedBonus,
     primaryCity, getOrCreateHomeArmy, createArmyFromGarrison, formNewArmyFromHalf, disbandArmyIntoHome,
     sendArmyToTile, startReturn, resolveArmies,
     trainableUnitIds, canQueueTraining, queueTraining, resolveTrainQueues

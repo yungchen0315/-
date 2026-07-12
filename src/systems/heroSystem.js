@@ -15,13 +15,28 @@
 
   function expNeededForLevel(level) { return 80 + level * 40; }
 
+  /** 已裝備物品對武力／統率／智力的百分比加成（讓 cmdPct／intelPct 等裝備屬性實際生效）。 */
+  function equipmentStatBonus(heroState) {
+    const bonus = { forcePct: 0, cmdPct: 0, intelPct: 0 };
+    if (!heroState || !heroState.equipment) return bonus;
+    D.ITEM_SLOTS.forEach((slot) => {
+      const item = heroState.equipment[slot] && D.itemDefById(heroState.equipment[slot]);
+      if (!item || !item.effect) return;
+      if (item.effect.forcePct) bonus.forcePct += item.effect.forcePct;
+      if (item.effect.cmdPct) bonus.cmdPct += item.effect.cmdPct;
+      if (item.effect.intelPct) bonus.intelPct += item.effect.intelPct;
+    });
+    return bonus;
+  }
+
   function effectiveStats(heroState) {
     const def = D.heroDefById(heroState.heroDataId);
     const mul = 1 + (heroState.level - 1) * 0.05 * def.growth;
+    const eq = equipmentStatBonus(heroState);
     return {
-      force: Math.round(def.baseStats.force * mul),
-      cmd: Math.round(def.baseStats.cmd * mul),
-      intel: Math.round(def.baseStats.intel * mul)
+      force: Math.round(def.baseStats.force * mul * (1 + eq.forcePct / 100)),
+      cmd: Math.round(def.baseStats.cmd * mul * (1 + eq.cmdPct / 100)),
+      intel: Math.round(def.baseStats.intel * mul * (1 + eq.intelPct / 100))
     };
   }
 
