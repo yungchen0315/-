@@ -122,9 +122,17 @@
         if (itemId) {
           U.onTap(chip, () => { Hero.unequipItem(playerState, heroState.heroDataId, slot); render(container, saveGame, playerState); });
         }
+        chip.title = itemId ? D.describeItemEffect(D.itemDefById(itemId)) : '';
         equipLine.appendChild(chip);
       });
       body.appendChild(equipLine);
+      // 已裝備物品的實際作用逐項標示。
+      D.ITEM_SLOTS.forEach((slot) => {
+        const itemId = heroState.equipment[slot];
+        if (!itemId) return;
+        const item = D.itemDefById(itemId);
+        body.appendChild(U.el('div', 'equipEffLine', item.name + '：' + D.describeItemEffect(item)));
+      });
       buildTacticSection(body, container, saveGame, playerState, heroState, def);
       card.appendChild(body);
       rosterListEl.appendChild(card);
@@ -145,7 +153,8 @@
         const item = D.itemDefById(itemId);
         const qty = playerState.inventory[itemId];
         const row = U.el('div', 'exploreTargetRow');
-        row.appendChild(U.el('span', '', item.name + '（' + SLOT_LABELS[item.slot] + '）x' + qty));
+        row.appendChild(U.el('span', 'invItemLabel', item.name + '（' + SLOT_LABELS[item.slot] + '）x' + qty +
+          '<br><span class="invItemEff">' + D.describeItemEffect(item) + '</span>'));
         const select = document.createElement('select');
         select.className = 'armySelect';
         heroList.forEach((h) => {

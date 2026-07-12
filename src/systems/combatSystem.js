@@ -91,6 +91,8 @@
   function sideCombatStats(units, heroIds, eff, playerState, isAttacker) {
     heroIds = (heroIds || []).filter(Boolean);
     const bonus = squadCombatBonus(playerState, heroIds, isAttacker);
+    // 武將羈絆（合擊／連攜）：同隊特定武將觸發時，替全隊再疊加一層加成。
+    (D.activeBonds ? D.activeBonds(heroIds) : []).forEach((b) => applyEffects(bonus, b.effects, !isAttacker, isAttacker));
     let atk = 0, def = 0, hp = 0;
     Object.keys(units).forEach((type) => {
       const qty = units[type] || 0;
@@ -174,6 +176,13 @@
     });
   }
 
+  /** 開場推入某一方觸發中的武將羈絆事件（合擊／連攜），供動畫閃現羈絆橫幅。 */
+  function pushBondEvents(timeline, side, heroIds) {
+    (D.activeBonds ? D.activeBonds(heroIds) : []).forEach((b) => {
+      timeline.push({ turn: 0, side, type: 'bond', bondName: b.name, bondType: b.type });
+    });
+  }
+
   /**
    * 攻擊方 vs 守軍（守軍可為駐守部隊＋城防加成，也可為野外據點的固定守備力）。
    * 真正逐回合計算：雙方每回合互相扣減 HP 池，直到一方歸零或達到回合上限；
@@ -226,6 +235,9 @@
     // 開場依序播放全隊每位武將的自帶技能與已裝配的戰法，讓多武將編隊的每個戰法都在動畫上現身。
     pushSkillEvents(timeline, 'attacker', attackerHeroIds, attackerPlayerState);
     pushSkillEvents(timeline, 'defender', defenderHeroIds, defenderPlayerState);
+    // 觸發中的武將羈絆（合擊／連攜）也在開場閃現。
+    pushBondEvents(timeline, 'attacker', attackerHeroIds);
+    pushBondEvents(timeline, 'defender', defenderHeroIds);
     // 兵種相剋佔優時，開場也閃現一次相剋提示，讓玩家看得到「這場帶對兵種了」。
     if (atkCounters - defCounters > 0.15) timeline.push({ turn: 0, side: 'attacker', type: 'counter' });
     if (defCounters - atkCounters > 0.15) timeline.push({ turn: 0, side: 'defender', type: 'counter' });

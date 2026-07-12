@@ -95,6 +95,15 @@
       : '未編列武將'));
     card.appendChild(U.el('div', 'armySquadHint', '編隊統率上限 ' + Hero.armyLeadershipCap(playerState, army) + '　部隊統率需求 ' + Army.leadershipUsed(army)));
 
+    // 武將羈絆：已觸發的合擊／連攜（綠色），以及差一名即可觸發的提示（灰色）。
+    D.activeBonds(squadIds).forEach((b) => {
+      card.appendChild(U.el('div', 'squadBondLine', '⚡ ' + b.type + '【' + b.name + '】　' + D.describeSkillEffects(b.effects)));
+    });
+    D.nearBonds(squadIds).forEach((b) => {
+      const missing = b.heroIds.filter((id) => squadIds.indexOf(id) < 0).map((id) => (D.heroDefById(id) || {}).name);
+      card.appendChild(U.el('div', 'squadBondHint', '差一名可觸發【' + b.name + '】：' + missing.join('／')));
+    });
+
     if (army.status !== 'garrison') return; // 行軍／交戰中不可調整編隊。
 
     // 已在隊上的武將：各自可「卸除」（若卸除主將，由第一名副將遞補）。

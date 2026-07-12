@@ -172,6 +172,9 @@ button, .navBtn, select {
 .equipLine { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .equipChip { font-size: 11px; background: rgba(0,0,0,0.25); color: #8a8070; padding: 3px 8px; border-radius: 10px; }
 .equipChip.equipChipFilled { background: rgba(224,178,90,0.2); color: #e0b25a; }
+.equipEffLine { font-size: 11px; color: #9fb98f; margin-top: 3px; }
+.invItemLabel { flex: 1 1 auto; min-width: 0; }
+.invItemEff { font-size: 11px; color: #9fb98f; }
 .tacticLine { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .tacticChip { font-size: 11px; background: rgba(120,90,180,0.16); color: #cdbcf0; padding: 3px 8px; border-radius: 10px; }
 .tacticChip.tacticChipInnate { background: rgba(224,178,90,0.15); color: #ffe08a; }
@@ -213,6 +216,8 @@ button, .navBtn, select {
 .armyUnits { font-size: 13px; margin: 4px 0; }
 .armyGeneral { font-size: 12px; color: #bcae8f; margin-bottom: 4px; }
 .armySquadHint { font-size: 11px; color: #8f866f; margin-bottom: 6px; }
+.squadBondLine { font-size: 11px; color: #9be08a; margin: 2px 0; }
+.squadBondHint { font-size: 11px; color: #8a8070; margin: 2px 0; }
 .squadSlotRow { display: flex; align-items: center; gap: 6px; margin: 4px 0; }
 .squadSlotRole { flex: 0 0 auto; font-size: 10px; padding: 1px 6px; border-radius: 8px; background: rgba(224,178,90,0.18); color: #ffe08a; }
 .squadSlotName { flex: 1 1 auto; font-size: 12px; color: #d8cfb8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
