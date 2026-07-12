@@ -51,12 +51,15 @@
     bond('weiwumouchen', '魏武謀臣', '連攜', ['caocao', 'simayi', 'guojia'], 2,
       '謀臣輔弼，亂敵軍心',
       [{ stat: 'enemyAtkPct', value: -10 }, { stat: 'lossReductionPct', value: 6 }]),
-    bond('wuziliangjiang', '五子良將', '合擊', ['zhangliao', 'xuhuang', 'zhangjunyi'], 2,
-      '良將協同，攻勢凌厲',
-      [{ stat: 'atkPct', value: 12 }]),
+    bond('wuziliangjiang', '五子良將', '合擊', ['zhangliao', 'yuejin', 'yujin', 'zhangjunyi', 'xuhuang'], 3,
+      '張遼樂進于禁張郃徐晃，良將協同、攻勢凌厲',
+      [{ stat: 'atkPct', value: 14 }]),
     bond('huchielai', '虎痴惡來', '羈絆', ['xuchu', 'dianwei'], 2,
       '許褚典韋護主無雙，生命與防禦大增',
       [{ stat: 'defPct', value: 12 }, { stat: 'hpPct', value: 10 }]),
+    bond('xiahou', '夏侯兄弟', '羈絆', ['xiahoudun', 'xiahouyuan'], 2,
+      '夏侯惇夏侯淵，宗族猛將、攻守兼備',
+      [{ stat: 'atkPct', value: 8 }, { stat: 'defPct', value: 8 }]),
     // 吳
     bond('dongwududu', '東吳都督', '連攜', ['zhouyu', 'lumeng', 'luxun'], 2,
       '歷任都督，火計破敵',
@@ -64,12 +67,18 @@
     bond('jiangbiao', '江表虎臣', '合擊', ['ganning', 'taishici', 'zhoutai'], 2,
       '江東虎臣，奮勇當先',
       [{ stat: 'atkPct', value: 12 }]),
-    bond('sunshi', '孫氏一族', '羈絆', ['sunquan', 'sunshangxiang'], 2,
+    bond('sunshi', '孫氏一族', '羈絆', ['sunjian', 'sunce', 'sunquan', 'sunshangxiang'], 2,
       '孫氏同族，據江而守',
       [{ stat: 'defPct', value: 8 }, { stat: 'hpPct', value: 8 }]),
+    bond('sunjiance', '江東猛虎', '合擊', ['sunjian', 'sunce'], 2,
+      '孫堅孫策父子，勇烈進取',
+      [{ stat: 'atkPct', value: 12 }, { stat: 'firstStrikePct', value: 6 }]),
     bond('zhoulu', '周瑜魯肅', '連攜', ['zhouyu', 'lusu'], 2,
       '公瑾子敬，聯盟制勝',
-      [{ stat: 'enemyDefPct', value: -8 }, { stat: 'lossReductionPct', value: 6 }])
+      [{ stat: 'enemyDefPct', value: -8 }, { stat: 'lossReductionPct', value: 6 }]),
+    bond('jiangdongsujiang', '江東宿將', '羈絆', ['huanggai', 'chengpu', 'handang'], 2,
+      '黃蓋程普韓當，三世老臣、堅毅善戰',
+      [{ stat: 'defPct', value: 8 }, { stat: 'lossReductionPct', value: 6 }])
   ];
 
   const BOND_BY_ID = {};
