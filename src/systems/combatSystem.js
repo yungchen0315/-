@@ -17,14 +17,19 @@
    * combatBonusFor 與 UI 顯示（heroScreen.js 的數值說明）共用的同一份資料，
    * 不會有「說明寫的效果」跟「實際套用的效果」對不起來的情況。
    */
-  function applySkillEffects(bonus, heroDef, isDefender, isAttacker) {
-    if (!heroDef.skill || !heroDef.skill.effects) return;
-    heroDef.skill.effects.forEach((e) => {
+  /** 把一組 effects（武將技能或戰法共用同一份格式）套用到戰鬥加成上。 */
+  function applyEffects(bonus, effects, isDefender, isAttacker) {
+    if (!effects) return;
+    effects.forEach((e) => {
       if (e.when === 'attacking' && !isAttacker) return;
       if (e.when === 'defending' && !isDefender) return;
       if (e.stat === 'unitAtkPct') { bonus.unitAtkPct[e.unit] = (bonus.unitAtkPct[e.unit] || 0) + e.value; return; }
       bonus[e.stat] = (bonus[e.stat] || 0) + e.value;
     });
+  }
+
+  function applySkillEffects(bonus, heroDef, isDefender, isAttacker) {
+    if (heroDef.skill) applyEffects(bonus, heroDef.skill.effects, isDefender, isAttacker);
   }
 
   /** 技能＋已裝備物品的綜合戰鬥加成。playerState 為 null 時（例如劇情關卡的敵軍）只回傳空加成。 */
@@ -49,6 +54,13 @@
         if (e.unitAtkPct) Object.keys(e.unitAtkPct).forEach((r) => { bonus.unitAtkPct[r] = (bonus.unitAtkPct[r] || 0) + e.unitAtkPct[r]; });
       });
     }
+    // 已裝配的戰法：效果疊加在武將自帶技能之上（戰法效果與技能同一份格式）。
+    if (heroState && heroState.tactics) {
+      heroState.tactics.forEach((tid) => {
+        const t = D.tacticDefById(tid);
+        if (t) applyEffects(bonus, t.effects, !isAttacker, isAttacker);
+      });
+    }
     return bonus;
   }
 
@@ -57,8 +69,28 @@
     return h ? h.level : 1;
   }
 
-  function sideCombatStats(units, heroStateId, eff, playerState, isAttacker) {
-    const bonus = combatBonusFor(playerState, heroStateId, isAttacker);
+  /** 把一份戰鬥加成累加進另一份（供整隊多武將的技能／裝備效果疊加）。 */
+  function mergeCombatBonus(into, add) {
+    ['atkPct', 'defPct', 'hpPct', 'lossReductionPct', 'lootBonusPct', 'enemyAtkPct', 'enemyDefPct', 'firstStrikePct']
+      .forEach((k) => { into[k] = (into[k] || 0) + (add[k] || 0); });
+    Object.keys(add.unitAtkPct || {}).forEach((u) => { into.unitAtkPct[u] = (into.unitAtkPct[u] || 0) + add.unitAtkPct[u]; });
+    return into;
+  }
+
+  /** 一整隊武將（主將＋副將）技能＋裝備的綜合戰鬥加成——各武將效果直接疊加。 */
+  function squadCombatBonus(playerState, heroIds, isAttacker) {
+    const bonus = emptyCombatBonus();
+    (heroIds || []).forEach((id) => { if (id) mergeCombatBonus(bonus, combatBonusFor(playerState, id, isAttacker)); });
+    return bonus;
+  }
+
+  // 副將對「基礎戰力乘數（武力＋統率換算）」的貢獻權重：主將全額、副將打折，
+  // 避免單純多塞武將就等比暴力放大戰力，但仍讓多武將編隊明顯更強。
+  const SUB_HERO_STAT_WEIGHT = 0.4;
+
+  function sideCombatStats(units, heroIds, eff, playerState, isAttacker) {
+    heroIds = (heroIds || []).filter(Boolean);
+    const bonus = squadCombatBonus(playerState, heroIds, isAttacker);
     let atk = 0, def = 0, hp = 0;
     Object.keys(units).forEach((type) => {
       const qty = units[type] || 0;
@@ -71,13 +103,13 @@
       hp += qty * d.stats.hp;
     });
     let heroMul = 1;
-    if (heroStateId) {
-      const heroDef = D.heroDefById(heroStateId);
-      if (heroDef) {
-        const level = heroLevelIn(playerState, heroStateId);
-        heroMul = 1 + (heroDef.baseStats.force + heroDef.baseStats.cmd) / 400 + (level - 1) * 0.015;
-      }
-    }
+    heroIds.forEach((id, idx) => {
+      const heroDef = D.heroDefById(id);
+      if (!heroDef) return;
+      const level = heroLevelIn(playerState, id);
+      const weight = idx === 0 ? 1 : SUB_HERO_STAT_WEIGHT;
+      heroMul += weight * ((heroDef.baseStats.force + heroDef.baseStats.cmd) / 400 + (level - 1) * 0.015);
+    });
     atk *= heroMul * (1 + (bonus.atkPct + bonus.firstStrikePct) / 100);
     def *= 1 + bonus.defPct / 100;
     hp *= 1 + bonus.hpPct / 100;
@@ -87,6 +119,19 @@
   const TURN_DMG_SCALE = 6;
   const TURN_DEF_SOFTEN = 45;
   const MAX_TURNS = 10;
+
+  /** 開場為某一方全隊武將依序推入「自帶技能＋已裝配戰法」的技能事件，供動畫逐一閃現。 */
+  function pushSkillEvents(timeline, side, heroIds, playerState) {
+    heroIds.forEach((id) => {
+      const hd = D.heroDefById(id);
+      if (hd) timeline.push({ turn: 0, side, type: 'skill', skillName: hd.skill.name });
+      const hs = playerState && playerState.heroes && playerState.heroes[id];
+      ((hs && hs.tactics) || []).forEach((tid) => {
+        const t = D.tacticDefById(tid);
+        if (t) timeline.push({ turn: 0, side, type: 'skill', skillName: t.name });
+      });
+    });
+  }
 
   /**
    * 攻擊方 vs 守軍（守軍可為駐守部隊＋城防加成，也可為野外據點的固定守備力）。
@@ -98,14 +143,18 @@
    *   attackerLootBonusPct:number, turns:number, timeline:Array<Object>}}
    */
   function resolveBattle(opts) {
-    const { attackerUnits, attackerHeroStateId, attackerEff, attackerPlayerState,
-      defenderUnits, defenderHeroStateId, defenderEff, defenderPlayerState,
+    const { attackerUnits, attackerHeroStateId, attackerSubHeroStateIds, attackerEff, attackerPlayerState,
+      defenderUnits, defenderHeroStateId, defenderSubHeroStateIds, defenderEff, defenderPlayerState,
       defenderStaticGuard, wallBonusPct } = opts;
 
-    const atkStats = sideCombatStats(attackerUnits, attackerHeroStateId, attackerEff || {}, attackerPlayerState, true);
+    // 一隊 = 主將在前、副將在後，全隊技能一起疊加、戰力一起計算（sideCombatStats）。
+    const attackerHeroIds = [attackerHeroStateId].concat(attackerSubHeroStateIds || []).filter(Boolean);
+    const defenderHeroIds = [defenderHeroStateId].concat(defenderSubHeroStateIds || []).filter(Boolean);
+
+    const atkStats = sideCombatStats(attackerUnits, attackerHeroIds, attackerEff || {}, attackerPlayerState, true);
     let defAtk = 0, defDef = 0, defHp = 0, defBonus = emptyCombatBonus();
     if (defenderUnits) {
-      const dStats = sideCombatStats(defenderUnits, defenderHeroStateId, defenderEff || {}, defenderPlayerState, false);
+      const dStats = sideCombatStats(defenderUnits, defenderHeroIds, defenderEff || {}, defenderPlayerState, false);
       defAtk = dStats.atk; defDef = dStats.def; defHp = dStats.hp; defBonus = dStats.bonus;
     }
     if (defenderStaticGuard) {
@@ -125,14 +174,9 @@
     let defHpPool = defHpMax;
 
     const timeline = [];
-    if (attackerHeroStateId) {
-      const hd = D.heroDefById(attackerHeroStateId);
-      if (hd) timeline.push({ turn: 0, side: 'attacker', type: 'skill', skillName: hd.skill.name });
-    }
-    if (defenderHeroStateId) {
-      const hd = D.heroDefById(defenderHeroStateId);
-      if (hd) timeline.push({ turn: 0, side: 'defender', type: 'skill', skillName: hd.skill.name });
-    }
+    // 開場依序播放全隊每位武將的自帶技能與已裝配的戰法，讓多武將編隊的每個戰法都在動畫上現身。
+    pushSkillEvents(timeline, 'attacker', attackerHeroIds, attackerPlayerState);
+    pushSkillEvents(timeline, 'defender', defenderHeroIds, defenderPlayerState);
 
     let turn = 0;
     let winner = null;
@@ -226,10 +270,12 @@
     const defEff = Econ.computeEffects(defender);
     const garrison = Object.values(defender.armies).filter((a) => a.status === 'garrison');
     const defUnits = U.sumDicts(garrison.map((a) => a.units));
-    const defenderHeroStateId = (garrison.find((a) => a.heroStateId) || {}).heroStateId || null;
+    const defArmy = garrison.find((a) => a.heroStateId) || null;
+    const defenderHeroStateId = defArmy ? defArmy.heroStateId : null;
+    const defenderSubHeroStateIds = defArmy ? (defArmy.subHeroStateIds || []) : [];
     const result = resolveBattle({
-      attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerEff: eff, attackerPlayerState: playerState,
-      defenderUnits: defUnits, defenderHeroStateId, defenderEff: defEff, defenderPlayerState: defender,
+      attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerSubHeroStateIds: army.subHeroStateIds, attackerEff: eff, attackerPlayerState: playerState,
+      defenderUnits: defUnits, defenderHeroStateId, defenderSubHeroStateIds, defenderEff: defEff, defenderPlayerState: defender,
       wallBonusPct: defEff.defenseBonusPct + defEff.wallDefPct
     });
     const win = result.winner === 'attacker';
@@ -239,8 +285,8 @@
     return {
       kind: 'capital', attackerFactionId: playerState.factionId, defenderFactionId: tile.ownerFactionId,
       targetName: tile.name, purpose: army.purpose,
-      title: '襲擾「' + tile.name + '」', attackerHeroStateId: army.heroStateId, attackerUnitsBefore,
-      defenderHeroStateId, defenderUnitsBefore: defUnits, defenderName: D.factionDefById(tile.ownerFactionId).name + ' 守軍',
+      title: '襲擾「' + tile.name + '」', attackerHeroStateId: army.heroStateId, attackerSubHeroStateIds: (army.subHeroStateIds || []).slice(), attackerUnitsBefore,
+      defenderHeroStateId, defenderSubHeroStateIds, defenderUnitsBefore: defUnits, defenderName: D.factionDefById(tile.ownerFactionId).name + ' 守軍',
       timeline: result.timeline, win, resultText, result
     };
   }
@@ -248,7 +294,7 @@
   function engageResourceBattle(playerState, army, tile, eff, attackerUnitsBefore) {
     const defenderUnitsBefore = guardDisplayUnits(tile.guardPower);
     const result = resolveBattle({
-      attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerEff: eff, attackerPlayerState: playerState,
+      attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerSubHeroStateIds: army.subHeroStateIds, attackerEff: eff, attackerPlayerState: playerState,
       defenderStaticGuard: tile.guardPower
     });
     const win = result.winner === 'attacker';
@@ -258,8 +304,8 @@
     return {
       kind: 'resource', attackerFactionId: playerState.factionId,
       targetName: tile.name, purpose: army.purpose,
-      title: '進攻「' + tile.name + '」', attackerHeroStateId: army.heroStateId, attackerUnitsBefore,
-      defenderHeroStateId: null, defenderUnitsBefore, defenderName: tile.name + '守軍',
+      title: '進攻「' + tile.name + '」', attackerHeroStateId: army.heroStateId, attackerSubHeroStateIds: (army.subHeroStateIds || []).slice(), attackerUnitsBefore,
+      defenderHeroStateId: null, defenderSubHeroStateIds: [], defenderUnitsBefore, defenderName: tile.name + '守軍',
       timeline: result.timeline, win, resultText, result
     };
   }
@@ -269,7 +315,7 @@
     if (!prevOwnerFactionId) {
       const defenderUnitsBefore = guardDisplayUnits(tile.guardPower);
       const result = resolveBattle({
-        attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerEff: eff, attackerPlayerState: playerState,
+        attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerSubHeroStateIds: army.subHeroStateIds, attackerEff: eff, attackerPlayerState: playerState,
         defenderStaticGuard: tile.guardPower
       });
       const win = result.winner === 'attacker';
@@ -279,8 +325,8 @@
       return {
         kind: 'city', attackerFactionId: playerState.factionId,
         targetName: tile.name, purpose: army.purpose,
-        title: '進攻「' + tile.name + '」', attackerHeroStateId: army.heroStateId, attackerUnitsBefore,
-        defenderHeroStateId: null, defenderUnitsBefore, defenderName: '叛軍守備隊',
+        title: '進攻「' + tile.name + '」', attackerHeroStateId: army.heroStateId, attackerSubHeroStateIds: (army.subHeroStateIds || []).slice(), attackerUnitsBefore,
+        defenderHeroStateId: null, defenderSubHeroStateIds: [], defenderUnitsBefore, defenderName: '叛軍守備隊',
         timeline: result.timeline, win, resultText, result
       };
     }
@@ -289,10 +335,12 @@
     const defEff = Econ.computeEffects(defender);
     const garrison = Object.values(defender.armies).filter((a) => a.status === 'garrison');
     const defUnits = U.sumDicts(garrison.map((a) => a.units));
-    const defenderHeroStateId = (garrison.find((a) => a.heroStateId) || {}).heroStateId || null;
+    const defArmy = garrison.find((a) => a.heroStateId) || null;
+    const defenderHeroStateId = defArmy ? defArmy.heroStateId : null;
+    const defenderSubHeroStateIds = defArmy ? (defArmy.subHeroStateIds || []) : [];
     const result = resolveBattle({
-      attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerEff: eff, attackerPlayerState: playerState,
-      defenderUnits: defUnits, defenderHeroStateId, defenderEff: defEff, defenderPlayerState: defender,
+      attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerSubHeroStateIds: army.subHeroStateIds, attackerEff: eff, attackerPlayerState: playerState,
+      defenderUnits: defUnits, defenderHeroStateId, defenderSubHeroStateIds, defenderEff: defEff, defenderPlayerState: defender,
       wallBonusPct: defEff.defenseBonusPct + defEff.wallDefPct
     });
     const win = result.winner === 'attacker';
@@ -302,8 +350,8 @@
     return {
       kind: 'city', attackerFactionId: playerState.factionId, defenderFactionId: prevOwnerFactionId,
       targetName: tile.name, purpose: army.purpose,
-      title: '進攻「' + tile.name + '」', attackerHeroStateId: army.heroStateId, attackerUnitsBefore,
-      defenderHeroStateId, defenderUnitsBefore: defUnits, defenderName: D.factionDefById(prevOwnerFactionId).name + ' 守軍',
+      title: '進攻「' + tile.name + '」', attackerHeroStateId: army.heroStateId, attackerSubHeroStateIds: (army.subHeroStateIds || []).slice(), attackerUnitsBefore,
+      defenderHeroStateId, defenderSubHeroStateIds, defenderUnitsBefore: defUnits, defenderName: D.factionDefById(prevOwnerFactionId).name + ' 守軍',
       timeline: result.timeline, win, resultText, result
     };
   }
@@ -311,7 +359,7 @@
   function engageMonsterBattle(playerState, army, tile, eff, attackerUnitsBefore) {
     const defenderUnitsBefore = guardDisplayUnits(tile.guardPower);
     const result = resolveBattle({
-      attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerEff: eff, attackerPlayerState: playerState,
+      attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerSubHeroStateIds: army.subHeroStateIds, attackerEff: eff, attackerPlayerState: playerState,
       defenderStaticGuard: tile.guardPower
     });
     const win = result.winner === 'attacker';
@@ -326,8 +374,8 @@
     return {
       kind: 'monster', attackerFactionId: playerState.factionId,
       targetName: tile.name, purpose: army.purpose,
-      title: '討伐「' + tile.name + '」', attackerHeroStateId: army.heroStateId, attackerUnitsBefore,
-      defenderHeroStateId: null, defenderUnitsBefore, defenderName: tile.name,
+      title: '討伐「' + tile.name + '」', attackerHeroStateId: army.heroStateId, attackerSubHeroStateIds: (army.subHeroStateIds || []).slice(), attackerUnitsBefore,
+      defenderHeroStateId: null, defenderSubHeroStateIds: [], defenderUnitsBefore, defenderName: tile.name,
       timeline: result.timeline, win, resultText, result, itemDropId
     };
   }
@@ -399,6 +447,14 @@
     trimBattleLog(playerState);
   }
 
+  /** 戰後經驗改為發給整隊武將（主將＋副將），讓副將也能隨出戰成長。 */
+  function awardSquadExp(playerState, army, amount) {
+    window.Game.Systems.Hero.squadHeroIds(army).forEach((id) => {
+      const hs = playerState.heroes[id];
+      if (hs) window.Game.Systems.Hero.awardExp(hs, amount);
+    });
+  }
+
   function settleCapitalBattle(saveGame, rec, now) {
     const attackerState = saveGame.players[rec.attackerFactionId];
     const army = attackerState.armies[rec.armyId];
@@ -420,7 +476,7 @@
       garrison.forEach((a) => { const c = applyCasualties(a.units, rec.result.defenderLossRate); a.units = c.remaining; });
       battle.outcome = 'win';
       battle.loot = plunder;
-      if (army.heroStateId) window.Game.Systems.Hero.awardExp(attackerState.heroes[army.heroStateId], 60);
+      awardSquadExp(attackerState, army, 60);
     } else {
       battle.outcome = 'lose';
     }
@@ -440,7 +496,7 @@
     if (rec.win && tile) {
       window.Game.Systems.Map.captureResourceTile(attackerState, tile, rec.result.attackerLootBonusPct, now);
       battle.outcome = 'win';
-      if (army.heroStateId) window.Game.Systems.Hero.awardExp(attackerState.heroes[army.heroStateId], 30);
+      awardSquadExp(attackerState, army, 30);
     } else {
       battle.outcome = 'lose';
     }
@@ -466,7 +522,7 @@
       }
       window.Game.Systems.Map.captureCityTile(saveGame, attackerState, tile, now);
       battle.outcome = 'win';
-      if (army.heroStateId) window.Game.Systems.Hero.awardExp(attackerState.heroes[army.heroStateId], rec.defenderFactionId ? 80 : 50);
+      awardSquadExp(attackerState, army, rec.defenderFactionId ? 80 : 50);
     } else {
       battle.outcome = 'lose';
     }
@@ -497,7 +553,7 @@
       battle.outcome = 'win';
       battle.loot = loot;
       if (rec.itemDropId) { window.Game.Systems.Hero.grantItem(attackerState, rec.itemDropId, 1); battle.itemDrop = D.itemDefById(rec.itemDropId).name; }
-      if (army.heroStateId) window.Game.Systems.Hero.awardExp(attackerState.heroes[army.heroStateId], 30);
+      awardSquadExp(attackerState, army, 30);
     } else {
       battle.outcome = 'lose';
     }

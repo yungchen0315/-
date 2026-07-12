@@ -56,6 +56,7 @@
           window.Game.UI.BattleScreen.play(playerState, {
             title: mission.name,
             attackerHeroStateId: r.attackerHeroStateId,
+            attackerSubHeroStateIds: r.attackerSubHeroStateIds,
             attackerUnitsBefore: r.attackerUnitsBefore,
             defenderHeroStateId: r.defenderHeroStateId,
             defenderUnitsBefore: r.defenderUnitsBefore,

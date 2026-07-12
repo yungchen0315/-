@@ -47,6 +47,14 @@
     return { name: fallbackName || '敵軍', level: 1, force, cmd, intel, portraitDef };
   }
 
+  /** 在武將卡片下方列出副將名字（多武將編隊），沒有副將時不顯示。 */
+  function appendSubHeroLine(card, subHeroStateIds) {
+    const names = (subHeroStateIds || [])
+      .map((id) => (D.heroDefById(id) || {}).name)
+      .filter(Boolean);
+    if (names.length) card.appendChild(U.el('div', 'battleSideSubHeroes', '副將：' + names.join('・')));
+  }
+
   function unitRow(units) {
     return Object.keys(units || {})
       .filter((t) => (units[t] || 0) > 0)
@@ -137,6 +145,7 @@
     const atkCard = U.el('div', 'battleSideCard');
     atkCard.appendChild(HP.heroPortraitEl(attacker.portraitDef, 'battleSidePortrait'));
     atkCard.appendChild(U.el('div', 'battleSideName', attacker.name + (attacker.level > 1 ? ' Lv.' + attacker.level : '')));
+    appendSubHeroLine(atkCard, opts.attackerSubHeroStateIds);
     const atkHpBarWrap = U.el('div', 'battleHpBarWrap');
     const atkHpBar = U.el('div', 'battleHpBar');
     atkHpBarWrap.appendChild(atkHpBar);
@@ -152,6 +161,7 @@
     const defCard = U.el('div', 'battleSideCard battleSideCardRight');
     defCard.appendChild(HP.heroPortraitEl(defender.portraitDef, 'battleSidePortrait battleSidePortraitFlip'));
     defCard.appendChild(U.el('div', 'battleSideName', defender.name));
+    appendSubHeroLine(defCard, opts.defenderSubHeroStateIds);
     const defHpBarWrap = U.el('div', 'battleHpBarWrap');
     const defHpBar = U.el('div', 'battleHpBar');
     defHpBarWrap.appendChild(defHpBar);

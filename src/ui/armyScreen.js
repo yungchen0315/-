@@ -78,6 +78,66 @@
     container.appendChild(armyPanel);
   }
 
+  /**
+   * 編隊面板：一隊 1 主將＋最多 2 副將。全隊技能在戰鬥時一起疊加、統率上限相加，
+   * 因此副將愈多能帶愈多兵、戰力也愈強（率土之濱式多武將編隊）。駐守時可自由增減，
+   * 行軍／交戰中則鎖定不可調整。
+   */
+  function buildSquadEditor(card, saveGame, playerState, army) {
+    const Army = window.Game.Systems.Army;
+    const Hero = window.Game.Systems.Hero;
+    const heroName = (id) => (D.heroDefById(id) || {}).name || '未知武將';
+    const squadIds = Hero.squadHeroIds(army);
+
+    card.appendChild(U.el('div', 'armyGeneral', squadIds.length
+      ? '主將：' + heroName(army.heroStateId) + ((army.subHeroStateIds || []).length ? '　副將：' + army.subHeroStateIds.map(heroName).join('、') : '')
+      : '未編列武將'));
+    card.appendChild(U.el('div', 'armySquadHint', '編隊統率上限 ' + Hero.armyLeadershipCap(playerState, army) + '　部隊統率需求 ' + Army.leadershipUsed(army)));
+
+    if (army.status !== 'garrison') return; // 行軍／交戰中不可調整編隊。
+
+    // 已在隊上的武將：各自可「卸除」（若卸除主將，由第一名副將遞補）。
+    squadIds.forEach((id, idx) => {
+      const row = U.el('div', 'squadSlotRow');
+      const hs = playerState.heroes[id];
+      row.appendChild(U.el('span', 'squadSlotRole', idx === 0 ? '主將' : '副將'));
+      row.appendChild(U.el('span', 'squadSlotName', heroName(id) + '（統率 ' + (hs ? Hero.leadershipCap(hs) : 0) + '）'));
+      const removeBtn = U.el('button', 'smallBtn squadRemoveBtn', '卸除');
+      U.onTap(removeBtn, () => {
+        const r = Hero.removeHeroFromArmy(playerState, army, id);
+        if (r.ok) { render(document.getElementById('screenArmy'), saveGame, playerState); } else Dlg.toast(r.reason);
+      });
+      row.appendChild(removeBtn);
+      card.appendChild(row);
+    });
+
+    // 還有空位（主將未指派，或副將未滿）時，提供一個下拉選單指派尚未編隊的武將。
+    const hasRoom = !army.heroStateId || (army.subHeroStateIds || []).length < Hero.SQUAD_SUB_MAX;
+    if (!hasRoom) return;
+    const available = Object.values(playerState.heroes).filter((h) => !h.assignedArmyId);
+    if (available.length === 0) {
+      if (squadIds.length === 0) card.appendChild(U.el('div', 'emptyHint', '目前沒有可編入的武將。'));
+      return;
+    }
+    const assignRow = U.el('div', 'generalAssignRow');
+    const select = document.createElement('select');
+    select.className = 'armySelect';
+    available.forEach((h) => {
+      const opt = document.createElement('option');
+      opt.value = h.heroDataId;
+      opt.textContent = D.heroDefById(h.heroDataId).name + '（統率上限 ' + Hero.leadershipCap(h) + '）';
+      select.appendChild(opt);
+    });
+    assignRow.appendChild(select);
+    const assignBtn = U.el('button', 'smallBtn', army.heroStateId ? '加入副將' : '指派主將');
+    U.onTap(assignBtn, () => {
+      const r = Hero.assignHeroToArmy(playerState, select.value, army);
+      if (r.ok) { render(document.getElementById('screenArmy'), saveGame, playerState); } else Dlg.toast(r.reason);
+    });
+    assignRow.appendChild(assignBtn);
+    card.appendChild(assignRow);
+  }
+
   function buildArmyCard(container, saveGame, playerState, army, isPrimary) {
     const Army = window.Game.Systems.Army;
     const Hero = window.Game.Systems.Hero;
@@ -89,35 +149,7 @@
     const unitsLine = U.el('div', 'armyUnits', Object.keys(army.units).filter((u) => army.units[u] > 0)
       .map((u) => { const d = D.unitDefById(u); return d.icon + army.units[u] + '（攻' + d.stats.atk + ' 防' + d.stats.def + '）'; }).join('　') || '（無兵力）');
     card.appendChild(unitsLine);
-    const heroState = army.heroStateId ? playerState.heroes[army.heroStateId] : null;
-    card.appendChild(U.el('div', 'armyGeneral', heroState ? '主將：' + D.heroDefById(heroState.heroDataId).name : '未指派主將'));
-
-    const heroList = Object.values(playerState.heroes);
-    if (army.status === 'garrison' && heroList.length > 0) {
-      const assignRow = U.el('div', 'generalAssignRow');
-      const select = document.createElement('select');
-      select.className = 'armySelect';
-      const noneOpt = document.createElement('option');
-      noneOpt.value = '';
-      noneOpt.textContent = '（不指派）';
-      select.appendChild(noneOpt);
-      heroList.forEach((h) => {
-        const opt = document.createElement('option');
-        opt.value = h.heroDataId;
-        opt.textContent = D.heroDefById(h.heroDataId).name + '（統率上限 ' + Hero.leadershipCap(h) + '）';
-        if (h.heroDataId === army.heroStateId) opt.selected = true;
-        select.appendChild(opt);
-      });
-      assignRow.appendChild(select);
-      const assignBtn = U.el('button', 'smallBtn', '指派主將');
-      U.onTap(assignBtn, () => {
-        const r = select.value ? Hero.assignHeroToArmy(playerState, select.value, army) : Hero.unassignHero(playerState, army);
-        if (r.ok) { Dlg.toast('已更新主將'); render(document.getElementById('screenArmy'), saveGame, playerState); }
-        else Dlg.toast(r.reason);
-      });
-      assignRow.appendChild(assignBtn);
-      card.appendChild(assignRow);
-    }
+    buildSquadEditor(card, saveGame, playerState, army);
 
     if (army.status === 'fighting') {
       const destName = marchTargetName(saveGame, playerState, army);

@@ -172,6 +172,12 @@ button, .navBtn, select {
 .equipLine { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .equipChip { font-size: 11px; background: rgba(0,0,0,0.25); color: #8a8070; padding: 3px 8px; border-radius: 10px; }
 .equipChip.equipChipFilled { background: rgba(224,178,90,0.2); color: #e0b25a; }
+.tacticLine { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.tacticChip { font-size: 11px; background: rgba(120,90,180,0.16); color: #cdbcf0; padding: 3px 8px; border-radius: 10px; }
+.tacticChip.tacticChipInnate { background: rgba(224,178,90,0.15); color: #ffe08a; }
+.tacticChip.tacticChipFilled { cursor: pointer; }
+.tacticEquipRow { display: flex; gap: 6px; margin-top: 6px; }
+.tacticEquipRow .armySelect { flex: 1 1 auto; }
 .exploreRow, .exploreTargetRow, .queueRow, .campaignFightRow {
   display: flex; justify-content: space-between; align-items: center;
   padding: 6px 0; border-top: 1px solid rgba(255,255,255,0.06);
@@ -200,6 +206,11 @@ button, .navBtn, select {
 .armyStatus { color: #9fd18a; font-size: 12px; }
 .armyUnits { font-size: 13px; margin: 4px 0; }
 .armyGeneral { font-size: 12px; color: #bcae8f; margin-bottom: 4px; }
+.armySquadHint { font-size: 11px; color: #8f866f; margin-bottom: 6px; }
+.squadSlotRow { display: flex; align-items: center; gap: 6px; margin: 4px 0; }
+.squadSlotRole { flex: 0 0 auto; font-size: 10px; padding: 1px 6px; border-radius: 8px; background: rgba(224,178,90,0.18); color: #ffe08a; }
+.squadSlotName { flex: 1 1 auto; font-size: 12px; color: #d8cfb8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.squadRemoveBtn { flex: 0 0 auto; }
 .armyCardMarching { border: 1px solid rgba(224,178,90,0.4); background: rgba(224,178,90,0.06); }
 .disbandBtn { background: linear-gradient(180deg, #7a5a3a, #5a3f24); margin-top: 4px; }
 .armyDestination { font-size: 12px; color: #e0b25a; margin-bottom: 4px; }
@@ -416,6 +427,7 @@ button, .navBtn, select {
 .battleSidePortrait { width: 64px; margin: 0 auto; }
 .battleSidePortraitFlip .heroPortraitSvg { transform: scaleX(-1); }
 .battleSideName { font-size: 12px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.battleSideSubHeroes { font-size: 10px; margin-top: 2px; color: #d8c89a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .battleHpBarWrap { height: 6px; background: rgba(0,0,0,0.4); border-radius: 3px; overflow: hidden; margin-top: 4px; }
 .battleHpBar { height: 100%; width: 100%; background: linear-gradient(90deg, #d9483f, #e0b25a); transition: width 0.3s ease; }
 .battleTurnBox { flex: 0 0 auto; text-align: center; padding-top: 6px; }

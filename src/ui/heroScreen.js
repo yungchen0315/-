@@ -12,6 +12,46 @@
 
   function rarityStars(rarity) { return '★'.repeat(rarity) + '☆'.repeat(5 - rarity); }
 
+  /**
+   * 戰法區塊：顯示武將自帶戰法（唯讀）＋已裝配的傳授戰法（可點擊卸下），以及在還有
+   * 空欄時提供一個下拉選單，把其他已擁有武將的招牌戰法傳授過來。
+   */
+  function buildTacticSection(body, container, saveGame, playerState, heroState, def) {
+    const Hero = window.Game.Systems.Hero;
+    const line = U.el('div', 'tacticLine');
+    line.appendChild(U.el('span', 'tacticChip tacticChipInnate', '自帶【' + def.skill.name + '】'));
+    (heroState.tactics || []).forEach((tid) => {
+      const t = D.tacticDefById(tid);
+      if (!t) return;
+      const chip = U.el('span', 'tacticChip tacticChipFilled', '戰法【' + t.name + '】✕');
+      U.onTap(chip, () => { Hero.unequipTactic(playerState, heroState.heroDataId, tid); render(container, saveGame, playerState); });
+      line.appendChild(chip);
+    });
+    body.appendChild(line);
+
+    if ((heroState.tactics || []).length >= Hero.TACTIC_SLOTS) return;
+    const avail = Hero.availableTacticsForHero(playerState, heroState.heroDataId);
+    if (avail.length === 0) return;
+    const row = U.el('div', 'tacticEquipRow');
+    const select = document.createElement('select');
+    select.className = 'armySelect';
+    avail.forEach((t) => {
+      const opt = document.createElement('option');
+      opt.value = t.id;
+      const eff = D.describeSkillEffects(t.effects);
+      opt.textContent = t.name + (eff ? '（' + eff + '）' : '');
+      select.appendChild(opt);
+    });
+    row.appendChild(select);
+    const btn = U.el('button', 'smallBtn', '裝配戰法');
+    U.onTap(btn, () => {
+      const r = Hero.equipTactic(playerState, heroState.heroDataId, select.value);
+      if (r.ok) render(container, saveGame, playerState); else Dlg.toast(r.reason);
+    });
+    row.appendChild(btn);
+    body.appendChild(row);
+  }
+
   function render(container, saveGame, playerState) {
     U.clearNode(container);
     const Hero = window.Game.Systems.Hero;
@@ -58,6 +98,7 @@
         equipLine.appendChild(chip);
       });
       body.appendChild(equipLine);
+      buildTacticSection(body, container, saveGame, playerState, heroState, def);
       card.appendChild(body);
       rosterListEl.appendChild(card);
     });

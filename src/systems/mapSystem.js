@@ -204,8 +204,83 @@
     return Object.values(mapState.tiles).filter((t) => t.type === 'city' && t.ownerFactionId !== factionId);
   }
 
+  /* ------------------------------------------------------------------------
+   * 連鎖佔領（率土之濱式領土機制）：出兵只能打「與自己領土相鄰」的目標，
+   * 攻下後領土延伸、才解鎖更外圍的目標，逼出前線與戰略縱深，而不是開局
+   * 就能瞬移攻打地圖任一角落。領土 = 首都＋已收復城池＋已佔產地；相鄰的
+   * 判定用 Chebyshev 距離（八方向）在 TERRITORY_REACH 格以內。
+   * ------------------------------------------------------------------------ */
+  const TERRITORY_REACH = 2;
+
+  /** 一個勢力目前實際擁有的領土格（首都、已收復城池、已佔產地）。 */
+  function ownedTiles(mapState, factionId) {
+    return Object.values(mapState.tiles).filter((t) =>
+      ((t.type === 'capital' || t.type === 'city' || t.type === 'resource') && t.ownerFactionId === factionId));
+  }
+
+  /** 這一格對該勢力而言是不是「可出兵攻打的目標型別」（型別對、且不是自己已擁有的）。 */
+  function isValidAttackTarget(tile, factionId) {
+    if (!tile) return false;
+    if (tile.type === 'resource') return !tile.ownerFactionId; // 敵方已佔的產地搶不了，只能打無主產地。
+    if (tile.type === 'monster') return true;
+    if (tile.type === 'city') return tile.ownerFactionId !== factionId; // 叛軍佔據或敵方城池。
+    if (tile.type === 'capital') return tile.ownerFactionId !== factionId; // 敵方主城（襲擾）。
+    return false;
+  }
+
+  /** 該勢力領土向外延伸 TERRITORY_REACH 格所覆蓋到的全部格 key（含領土本身），用於地圖上顯示勢力範圍。 */
+  function territoryReachKeys(mapState, factionId) {
+    const keys = new Set();
+    const w = mapState.width, h = mapState.height;
+    ownedTiles(mapState, factionId).forEach((t) => {
+      for (let dy = -TERRITORY_REACH; dy <= TERRITORY_REACH; dy++) {
+        for (let dx = -TERRITORY_REACH; dx <= TERRITORY_REACH; dx++) {
+          const x = t.x + dx, y = t.y + dy;
+          if (x < 0 || y < 0 || x >= w || y >= h) continue;
+          keys.add(M.tileKey(x, y));
+        }
+      }
+    });
+    return keys;
+  }
+
+  /**
+   * 該勢力目前「可以出兵攻打」的所有目標格 key。原則上是落在領土範圍內的有效目標；
+   * 若完全沒有任何相鄰目標（例如開局附近剛好沒有據點），則以安全網開放距離領土最近的
+   * 一個目標，確保永遠有路可擴張、不會卡死。
+   */
+  function attackableTargetKeys(mapState, factionId) {
+    const reach = territoryReachKeys(mapState, factionId);
+    const targets = Object.values(mapState.tiles).filter((t) => isValidAttackTarget(t, factionId));
+    const keys = new Set(targets.filter((t) => reach.has(t.id)).map((t) => t.id));
+    if (keys.size === 0 && targets.length) {
+      const owned = ownedTiles(mapState, factionId);
+      let best = null, bestD = Infinity;
+      targets.forEach((t) => {
+        const d = owned.length ? Math.min.apply(null, owned.map((o) => U.tileDistance(o, t))) : Infinity;
+        if (d < bestD) { bestD = d; best = t; }
+      });
+      if (best) keys.add(best.id);
+    }
+    return keys;
+  }
+
+  /**
+   * 判斷某勢力現在能不能對某格出兵，回傳 {ok, reason}。供出兵入口（armySystem）、
+   * 地圖資訊面板（mapScreen）與 AI（aiSystem）共用同一條規則。
+   */
+  function canAttackTile(mapState, factionId, tile) {
+    if (!isValidAttackTarget(tile, factionId)) return { ok: false, reason: '此處無法出兵。' };
+    if (!attackableTargetKeys(mapState, factionId).has(tile.id)) {
+      return { ok: false, reason: '此地尚未與你的領土相鄰，無法出兵。先佔領鄰近的據點或城池，領土才能延伸過去。' };
+    }
+    return { ok: true };
+  }
+
   window.Game.Systems.Map = {
+    TERRITORY_REACH,
     generateMap, tileAt, capitalTileOf, captureResourceTile, captureCityTile,
-    ownedResourceTiles, ownedResourceYieldPerMin, capturableCityTiles
+    ownedResourceTiles, ownedResourceYieldPerMin, capturableCityTiles,
+    ownedTiles, isValidAttackTarget, territoryReachKeys, attackableTargetKeys, canAttackTile
   };
 })();

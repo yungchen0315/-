@@ -19,6 +19,9 @@
    * @property {number} level
    * @property {number} exp 目前等級累積的經驗值。
    * @property {HeroEquipmentSlots} equipment
+   * @property {string[]} tactics 已裝配的戰法 id 陣列（最多 Hero.TACTIC_SLOTS 個），
+   *   來自其他已擁有武將傳授的招牌戰法（見 src/data/tacticDefs.js）。戰鬥時這些戰法的
+   *   效果會疊加在武將自帶技能之上。沒有裝配任何戰法時為空陣列。
    * @property {string|null} assignedArmyId 目前領軍的 ArmyState id，沒有則為 null。
    */
 
@@ -32,6 +35,7 @@
       level: 1,
       exp: 0,
       equipment: { weapon: null, armor: null, mount: null, accessory: null },
+      tactics: [],
       assignedArmyId: null
     };
   }

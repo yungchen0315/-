@@ -42,7 +42,7 @@
     const attackerUnitsBefore = Object.assign({}, army.units);
     const eff = window.Game.Systems.Economy.computeEffects(playerState);
     const result = window.Game.Systems.Combat.resolveBattle({
-      attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerEff: eff, attackerPlayerState: playerState,
+      attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerSubHeroStateIds: army.subHeroStateIds, attackerEff: eff, attackerPlayerState: playerState,
       defenderUnits: mission.enemy.units, defenderHeroStateId: mission.enemy.heroId, defenderEff: {}
     });
     const { remaining, losses } = window.Game.Systems.Combat.applyCasualties(army.units, result.attackerLossRate);
@@ -62,7 +62,7 @@
       if (mission.reward.unlockHeroId) window.Game.Systems.Hero.unlockHeroFromMission(playerState, mission.reward.unlockHeroId);
       if (mission.reward.itemReward) window.Game.Systems.Hero.grantItem(playerState, mission.reward.itemReward, 1);
       if (mission.reward.ingot) playerState.resources.ingot = (playerState.resources.ingot || 0) + mission.reward.ingot;
-      if (army.heroStateId) window.Game.Systems.Hero.awardExp(playerState.heroes[army.heroStateId], 100);
+      window.Game.Systems.Hero.squadHeroIds(army).forEach((id) => window.Game.Systems.Hero.awardExp(playerState.heroes[id], 100));
       refreshMissionStatuses(playerState);
       battle.outcome = 'win';
       battle.text = '「' + mission.name + '」戰役勝利！' +
@@ -79,6 +79,7 @@
     return {
       ok: true, win, battle, result,
       attackerHeroStateId: army.heroStateId,
+      attackerSubHeroStateIds: (army.subHeroStateIds || []).slice(),
       attackerUnitsBefore,
       defenderName: mission.enemy.name,
       defenderHeroStateId: mission.enemy.heroId,
