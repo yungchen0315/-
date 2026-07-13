@@ -323,13 +323,24 @@
     army.status = 'fighting';
     const durationMs = Math.max(MAP_BATTLE_MIN_DURATION_MS, engagement.timeline.length * MAP_BATTLE_MS_PER_EVENT + 1500);
     if (!saveGame.activeBattles) saveGame.activeBattles = {};
-    saveGame.activeBattles[tile.id] = Object.assign({}, engagement, { tileId: tile.id, armyId: army.id, startAt: now, endAt: now + durationMs });
+    // 以 armyId 為 key（而非 tile id）：同一地塊可能同時有多支部隊交戰（例如兩軍
+    // 同時攻打同一據點），用 tile id 當 key 會讓後到的部隊覆蓋掉先到部隊的記錄，
+    // 使先到部隊的狀態卡在 fighting 卻再也等不到 resolveActiveBattles 幫它結算。
+    saveGame.activeBattles[army.id] = Object.assign({}, engagement, { tileId: tile.id, armyId: army.id, startAt: now, endAt: now + durationMs });
   }
 
   /** 某地塊目前是否有正在進行中的戰鬥（供地圖畫面顯示交戰標記／觀戰按鈕）。過期或不存在則回傳 null。 */
   function activeBattleAt(saveGame, tileId, now) {
     if (!saveGame.activeBattles) return null;
-    const rec = saveGame.activeBattles[tileId];
+    const rec = Object.values(saveGame.activeBattles).find((b) => b.tileId === tileId);
+    if (!rec || now >= rec.endAt) return null;
+    return rec;
+  }
+
+  /** 某支部隊目前所屬的進行中戰鬥記錄（供部隊畫面顯示交戰進度條）。過期或不存在則回傳 null。 */
+  function activeBattleForArmy(saveGame, armyId, now) {
+    if (!saveGame.activeBattles) return null;
+    const rec = saveGame.activeBattles[armyId];
     if (!rec || now >= rec.endAt) return null;
     return rec;
   }
@@ -652,19 +663,19 @@
   /** 時間到了的進行中地圖戰鬥，逐一真正結算（傷亡／掠奪／佔領）並從 activeBattles 移除。 */
   function resolveActiveBattles(saveGame, now) {
     if (!saveGame.activeBattles) { saveGame.activeBattles = {}; return; }
-    Object.keys(saveGame.activeBattles).forEach((tileId) => {
-      const rec = saveGame.activeBattles[tileId];
+    Object.keys(saveGame.activeBattles).forEach((armyId) => {
+      const rec = saveGame.activeBattles[armyId];
       if (now < rec.endAt) return;
       if (rec.kind === 'capital') settleCapitalBattle(saveGame, rec, now);
       else if (rec.kind === 'resource') settleResourceBattle(saveGame, rec, now);
       else if (rec.kind === 'city') settleCityBattle(saveGame, rec, now);
       else settleMonsterBattle(saveGame, rec, now);
-      delete saveGame.activeBattles[tileId];
+      delete saveGame.activeBattles[armyId];
     });
   }
 
   window.Game.Systems.Combat = {
     emptyCombatBonus, combatBonusFor, sideCombatStats, resolveBattle, applyCasualties,
-    resolveArmyArrival, resolveActiveBattles, activeBattleAt, trimBattleLog
+    resolveArmyArrival, resolveActiveBattles, activeBattleAt, activeBattleForArmy, trimBattleLog
   };
 })();
