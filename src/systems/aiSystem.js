@@ -19,7 +19,21 @@
     tryTrain(playerState, now);
     tryResearch(playerState, now);
     tryRecruit(playerState);
+    tryAssignGenerals(playerState);
     tryMarch(saveGame, playerState, now);
+  }
+
+  /** 部隊出征需要主將帶隊（統率決定帶兵上限），把還沒編隊的武將指派到還沒有主將的
+   *  駐守部隊，確保 AI 手上一有武將（開局起始武將／酒館抽到）就能派得出兵。 */
+  function tryAssignGenerals(playerState) {
+    const Hero = window.Game.Systems.Hero;
+    const idle = Object.values(playerState.heroes).filter((h) => !h.assignedArmyId);
+    if (!idle.length) return;
+    const leaderless = Object.values(playerState.armies).filter((a) => a.status === 'garrison' && !a.heroStateId);
+    leaderless.forEach((army) => {
+      if (!idle.length) return;
+      Hero.assignHeroToArmy(playerState, idle.shift().heroDataId, army);
+    });
   }
 
   // 全部使用 aiTick 傳入的模擬時間 now，不能用 U.now()（真實系統時間）——

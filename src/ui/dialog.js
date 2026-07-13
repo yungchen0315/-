@@ -44,5 +44,33 @@
     });
   }
 
-  window.Game.UI.Dialog = { toast, showConfirm };
+  /**
+   * 單純告知用的彈窗（只有一顆確認鈕），用於離線收益回報等不需要玩家二選一的訊息。
+   * @param {string} message
+   * @param {string[]} [lines] 逐行列出的附加資訊（例如各項資源獲得量）。
+   * @param {string} [okLabel]
+   * @returns {Promise<void>}
+   */
+  function showInfo(message, lines, okLabel) {
+    return new Promise((resolve) => {
+      const overlay = U.el('div', 'confirmOverlay');
+      const box = U.el('div', 'confirmBox');
+      box.appendChild(U.el('div', 'confirmMessage', message));
+      if (lines && lines.length) {
+        const row = U.el('div', 'rateRow');
+        lines.forEach((line) => row.appendChild(U.el('span', 'rateItem', line)));
+        box.appendChild(row);
+      }
+      const btnRow = U.el('div', 'confirmBtnRow');
+      const okBtn = U.el('button', 'setupBtn confirmOkBtn', okLabel || '確定');
+      btnRow.appendChild(okBtn);
+      box.appendChild(btnRow);
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+
+      U.onTap(okBtn, () => { document.body.removeChild(overlay); resolve(); });
+    });
+  }
+
+  window.Game.UI.Dialog = { toast, showConfirm, showInfo };
 })();

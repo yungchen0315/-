@@ -58,8 +58,30 @@
     const restored = window.Game.Systems.Save.loadFromLocalStorage();
     window.GameSave = restored || window.Game.Systems.NewGame.createNewGame();
     normalizeSave(window.GameSave);
+    const awayMs = Math.max(0, U.now() - window.GameSave.lastActiveAt);
+    const player = humanPlayer();
+    const before = player ? Object.assign({}, player.resources) : null;
     window.Game.Systems.GameLoop.advanceTime(window.GameSave, U.now());
     afterReady();
+    if (player && before) showOfflineReport(player, before, awayMs);
+  }
+
+  // 離線收益回報：讀檔續玩時比對「advanceTime 追趕離線進度前後」的資源存量差額，
+  // 只要離開超過一分鐘且確實有進帳，就跳出提示告知玩家離線期間各項資源獲得多少
+  // （不論來源是城池產出、產地產出還是部隊返程掠奪，一律算在內，不需逐一列舉來源）。
+  const OFFLINE_REPORT_MIN_AWAY_MS = 60000;
+  function showOfflineReport(player, before, awayMs) {
+    if (awayMs < OFFLINE_REPORT_MIN_AWAY_MS) return;
+    const D = window.Game.Data;
+    const lines = [];
+    D.RESOURCE_TYPES.forEach((r) => {
+      const gain = Math.round((player.resources[r] || 0) - (before[r] || 0));
+      if (gain > 0) lines.push(D.RESOURCE_ICONS[r] + ' +' + gain);
+    });
+    const ingotGain = Math.round((player.resources.ingot || 0) - (before.ingot || 0));
+    if (ingotGain > 0) lines.push('🧧 +' + ingotGain);
+    if (!lines.length) return;
+    Dlg.showInfo('你離開了 ' + U.formatDurationWords(awayMs) + '，領地在此期間持續產出：', lines);
   }
 
   // 舊存檔相容：補上後來才加入的欄位，讓載入舊進度時不會因為缺欄位而出錯。
@@ -72,9 +94,19 @@
         if (!Array.isArray(hero.tactics)) hero.tactics = [];
       });
       if (!Array.isArray(p.learnedTactics)) p.learnedTactics = [];
+      if (!p.defeated) window.Game.Systems.NewGame.grantStarterHeroIfMissing(p);
     });
     if (!saveGame.activeBattles) saveGame.activeBattles = {};
-    Object.values((saveGame.map && saveGame.map.tiles) || {}).forEach((t) => { if (!t.terrain) t.terrain = 'plain'; });
+    Object.values((saveGame.map && saveGame.map.tiles) || {}).forEach((t) => {
+      if (!t.terrain) t.terrain = 'plain';
+      // 舊存檔的資源格／土地格沒有等級概念，一律補上「目前的 yieldPerMin／guardPower
+      // 就是 1 級的基準值」，避免升級系統把舊存檔的數值當成已經疊乘過等級的結果。
+      if (t.type === 'resource' && !t.level) {
+        t.level = 1;
+        t.baseYieldPerMin = t.yieldPerMin;
+        t.baseGuardPower = t.guardPower;
+      }
+    });
     // 舊存檔的空地一律轉為可佔領的土地格（新地圖在 generateMap 時就已轉換）。
     if (saveGame.map) window.Game.Systems.Map.convertEmptyTilesToLand(saveGame.map);
   }

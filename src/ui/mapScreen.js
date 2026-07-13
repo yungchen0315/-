@@ -503,11 +503,28 @@
         panel.appendChild(U.el('div', 'subHint', '仍由叛軍佔據，守備力：約 ' + tile.guardPower + '。擊破後即可收復，成為你的城池。'));
       }
     } else if (tile.type === 'resource') {
-      panel.appendChild(U.el('div', 'subHint', '每分鐘產量：' + D.RESOURCE_ICONS[tile.resourceType] + tile.yieldPerMin + ' ' + D.RESOURCE_NAMES[tile.resourceType]));
+      panel.appendChild(U.el('div', 'subHint', 'Lv.' + (tile.level || 1) + '　每分鐘產量：' + D.RESOURCE_ICONS[tile.resourceType] + tile.yieldPerMin + ' ' + D.RESOURCE_NAMES[tile.resourceType]));
       if (tile.ownerFactionId) {
-        panel.appendChild(U.el('div', 'subHint', tile.ownerFactionId === playerState.factionId
-          ? '已由你佔領，持續產出中，不需再駐守。'
-          : '已被 ' + D.factionDefById(tile.ownerFactionId).name + ' 佔領。'));
+        if (tile.ownerFactionId === playerState.factionId) {
+          panel.appendChild(U.el('div', 'subHint', '已由你佔領，持續產出中，不需再駐守。'));
+          const Map = window.Game.Systems.Map;
+          if ((tile.level || 1) >= Map.TILE_LEVEL_MAX) {
+            panel.appendChild(U.el('div', 'subHint', '已達最高等級。'));
+          } else {
+            const cost = Map.resourceTileUpgradeCost(tile);
+            const upgradeRow = U.el('div', 'exploreTargetRow');
+            upgradeRow.appendChild(U.el('span', '', '升級花費：' + D.RESOURCE_ICONS.wood + cost.wood + ' ' + D.RESOURCE_ICONS.stone + cost.stone));
+            const upgradeBtn = U.el('button', 'smallBtn', '升級');
+            U.onTap(upgradeBtn, () => {
+              const r = Map.upgradeResourceTile(playerState, tile);
+              if (r.ok) { Dlg.toast('已升級至 Lv.' + tile.level); renderInfoPanel(saveGame, playerState); } else Dlg.toast(r.reason);
+            });
+            upgradeRow.appendChild(upgradeBtn);
+            panel.appendChild(upgradeRow);
+          }
+        } else {
+          panel.appendChild(U.el('div', 'subHint', '已被 ' + D.factionDefById(tile.ownerFactionId).name + ' 佔領。'));
+        }
         return;
       }
       panel.appendChild(U.el('div', 'subHint', '尚未有勢力佔領，守備力：約 ' + tile.guardPower + '。擊破守軍即可永久佔領，之後不需再駐守。'));

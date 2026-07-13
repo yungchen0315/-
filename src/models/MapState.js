@@ -31,9 +31,17 @@
    * @property {boolean} [isLand] type 為 'resource' 時，標記此格是「由空地轉成的
    *   一般土地」（農田／聚落／林地／山岩／漁場，見 mapSystem.convertEmptyTilesToLand）：
    *   機制與資源點完全相同（可佔領、有產出），僅地圖畫面改以田野質感呈現、不畫資源圖示。
-   * @property {number} [yieldPerMin] type 為 'resource' 時，佔領後每分鐘的固定產出量。
+   * @property {number} [yieldPerMin] type 為 'resource' 時，佔領後每分鐘的固定產出量，
+   *   一律由 baseYieldPerMin 與 level 依 mapSystem.applyTileLevel 算出，不可直接疊乘。
    * @property {number} [guardPower] type 為 'resource'／'monster'／未佔領的 'city' 時的
-   *   守備力估算值。
+   *   守備力估算值；'resource' 時同樣由 baseGuardPower 與 level 算出。
+   * @property {number} [level] type 為 'resource' 時的等級（1~mapSystem.TILE_LEVEL_MAX）：
+   *   開局多數為 1 級，少數（約 15%）落在較高等級（產量與守備力同步較高）；佔領後可花
+   *   資源升級（見 mapSystem.upgradeResourceTile）。
+   * @property {number} [baseYieldPerMin] type 為 'resource' 時，1 級的每分鐘產出基準值，
+   *   生成後永遠不變，供 applyTileLevel 依 level 算出目前的 yieldPerMin。
+   * @property {number} [baseGuardPower] type 為 'resource' 時，1 級的守備力基準值，
+   *   生成後永遠不變，供 applyTileLevel 依 level 算出目前的 guardPower。
    * @property {number} [cooldownUntil] type 為 'monster' 時，擊破後的冷卻到期時間
    *   （epoch ms）；產地與城池不使用冷卻機制，改用永久佔領。
    * @property {'plain'|'forest'|'mountain'|'water'|'pass'} [terrain] 地形（見

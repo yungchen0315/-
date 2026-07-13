@@ -52,6 +52,10 @@
       summary.appendChild(U.el('div', 'subHint', '已佔領 ' + tiles.length + ' 個產地，持續固定產出中（不需駐守）。'));
     }
 
+    if (eff.dailyIngotYield > 0) {
+      summary.appendChild(U.el('div', 'subHint', '每座已攻佔城池每天固定產出元寶（首都全額、其他城池半額）：🧧 +' + eff.dailyIngotYield + '/天'));
+    }
+
     const popUsed = window.Game.Systems.Army.leadershipUsedByFaction(playerState);
     summary.appendChild(U.el('div', 'popRow', '統率上限：' + popUsed + ' / ' + eff.popCap));
     container.appendChild(summary);
