@@ -73,13 +73,17 @@
   function showOfflineReport(player, before, awayMs) {
     if (awayMs < OFFLINE_REPORT_MIN_AWAY_MS) return;
     const D = window.Game.Data;
+    const eff = window.Game.Systems.Economy.computeEffects(player);
     const lines = [];
     D.RESOURCE_TYPES.forEach((r) => {
+      // 該資源目前已存滿（達倉庫上限）就不用標示了——滿的話多出來的產出等於
+      // 白白浪費，告知「獲得多少」沒有意義，且可能誤導玩家以為還有空間。
+      if ((player.resources[r] || 0) >= eff.storageCap[r]) return;
       const gain = Math.round((player.resources[r] || 0) - (before[r] || 0));
-      if (gain > 0) lines.push(D.RESOURCE_ICONS[r] + ' +' + gain);
+      if (gain > 0) lines.push(D.RESOURCE_NAMES[r] + D.RESOURCE_ICONS[r] + ' +' + gain);
     });
     const ingotGain = Math.round((player.resources.ingot || 0) - (before.ingot || 0));
-    if (ingotGain > 0) lines.push('🧧 +' + ingotGain);
+    if (ingotGain > 0) lines.push('元寶🧧 +' + ingotGain);
     if (!lines.length) return;
     Dlg.showInfo('你離開了 ' + U.formatDurationWords(awayMs) + '，領地在此期間持續產出：', lines);
   }
