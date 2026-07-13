@@ -42,21 +42,23 @@
 
   /** @type {Object<string,BuildingDef>} */
   const BUILDING_DEFS = {
+    // capital 這棟建築身兼「城池等級」：每座城池（不只主城）都有自己的一份，
+    // 決定該城池能升到的其他建築等級上限，也決定該城池糧食／木材／石料／銀兩
+    // 的固定每小時產出（cityYieldPerHour，四種資源同一個數字，不用佔領地圖上
+    // 的產地也能產出）。CityState.isCapital 為 true 的那一座才是真正的主城：
+    // 產出雙倍，且只有主城才會顯示兵營／校場／工坊／酒館／學院／城牆——一般
+    // 城池只能升級城池等級（這棟）跟倉庫（見 cityScreen 依 isCapital 篩選建築列表）。
     capital: {
       id: 'capital', name: '主城', icon: '🏯', category: 'core',
-      desc: '勢力根基所在，等級決定整體城池規模與其他建築等級上限。',
+      desc: '城池等級：決定此城固定資源產出與其他建築等級上限，主城的固定產出為一般城池的兩倍。',
       unique: true,
       levels: buildLevels(MAX_BUILDING_LEVEL, (lv) => ({
         level: lv,
         cost: { wood: scale(200, 1.55, lv, 10), stone: scale(200, 1.55, lv, 10), gold: scale(100, 1.6, lv, 10) },
         timeMs: scale(5 * 60000, 1.4, lv),
-        effect: { maxOtherBuildingLevel: lv, popCap: scale(20, 1.25, lv, 1) }
+        effect: { maxOtherBuildingLevel: lv, popCap: scale(20, 1.25, lv, 1), cityYieldPerHour: scale(30, 1.3, lv, 5) }
       }))
     },
-    // 糧倉／伐木場／採石場／金礦（單一資源每小時產出）已移除：一般資源產出改由
-    // 地圖上實際佔領的產地／土地格提供（見 mapSystem／economySystem.tick），城池
-    // 分頁不再重複一套「建築生產」機制。原本這四棟建築同時兼職提升四種資源的
-    // 存量上限，這部分功能整併進倉庫——升級倉庫即可一次提升全部資源的存量上限。
     warehouse: {
       id: 'warehouse', name: '倉庫', icon: '📦', category: 'economy',
       desc: '提升四種資源的存量上限，避免產出溢出浪費。',

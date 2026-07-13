@@ -102,10 +102,17 @@
       // 舊存檔可能還留著已刪除建築（糧倉／伐木場／採石場／金礦）的資料，
       // 這些型別在 D.BUILDING_DEFS 已經不存在，留著只會讓依賴 buildingDefById
       // 的畫面在讀到孤兒資料時炸掉，直接清掉（連同尚未完工的升級一起作廢）。
+      const capitalTile = window.Game.Systems.Map.capitalTileOf(saveGame.map, p.factionId);
       Object.values(p.cities || {}).forEach((city) => {
         Object.keys(city.buildings || {}).forEach((type) => {
           if (!window.Game.Data.buildingDefById(type)) delete city.buildings[type];
         });
+        // 舊存檔沒有 isCapital 欄位：用地圖上該勢力實際的主城座標比對回填，
+        // 不能單純假設字典裡第一筆就是主城（armySystem.primaryCity 依 isCapital
+        // 判斷，回填錯了會讓訓練／招募／研究全部指向錯的城池）。
+        if (city.isCapital === undefined) {
+          city.isCapital = !!(capitalTile && city.tileX === capitalTile.x && city.tileY === capitalTile.y);
+        }
       });
     });
     if (!saveGame.activeBattles) saveGame.activeBattles = {};

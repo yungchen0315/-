@@ -45,7 +45,12 @@
     return bonus;
   }
 
-  function primaryCity(playerState) { return Object.values(playerState.cities)[0]; }
+  /** 主城：軍事／內政建築（兵營、校場、工坊、酒館、學院、城牆）只存在於主城，
+   *  訓練部隊、招募、研究一律以此為準。用 isCapital 找，不依賴字典插入順序。 */
+  function primaryCity(playerState) {
+    const cities = Object.values(playerState.cities);
+    return cities.find((c) => c.isCapital) || cities[0];
+  }
 
   function getOrCreateHomeArmy(playerState) {
     let army = Object.values(playerState.armies).find((a) => a.status === 'garrison');

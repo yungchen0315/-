@@ -17,11 +17,10 @@
    */
   function computeEffects(playerState) {
     const eff = {
-      // 一般資源（糧食／木材／石料／銀兩）不再由城池建築生產，一律來自地圖上
-      // 實際佔領的產地／土地格（見 mapSystem／tick 的 tileYield）；農耕術／
-      // 伐木術／採礦術／通商術這類科技仍保留「% 產出加成」的效果，只是改套用
-      // 在產地產出上，用同一套 tileYieldMul 讓 tick() 逐城結算時套用。
-      tileYieldMul: { food: 1, wood: 1, stone: 1, gold: 1 },
+      // 農耕術／伐木術／採礦術／通商術這類科技的「% 產出加成」套用在每座城池
+      // 自己的固定產出上（cityFixedYieldPerHour），用同一套 cityYieldMul 讓
+      // tick() 逐城結算時套用；地圖產地／土地格的產出不受這些科技影響。
+      cityYieldMul: { food: 1, wood: 1, stone: 1, gold: 1 },
       storageCap: { food: 1000, wood: 1000, stone: 1000, gold: 800 },
       popCap: 20,
       trainSpeedMul: { barracks: 1, drillground: 1, workshop: 1 },
@@ -64,10 +63,10 @@
       const t = D.technologyDefById(techId);
       if (!t) return;
       const e = t.effect;
-      if (e.foodPerHourPct) eff.tileYieldMul.food *= 1 + e.foodPerHourPct / 100;
-      if (e.woodPerHourPct) eff.tileYieldMul.wood *= 1 + e.woodPerHourPct / 100;
-      if (e.stonePerHourPct) eff.tileYieldMul.stone *= 1 + e.stonePerHourPct / 100;
-      if (e.goldPerHourPct) eff.tileYieldMul.gold *= 1 + e.goldPerHourPct / 100;
+      if (e.foodPerHourPct) eff.cityYieldMul.food *= 1 + e.foodPerHourPct / 100;
+      if (e.woodPerHourPct) eff.cityYieldMul.wood *= 1 + e.woodPerHourPct / 100;
+      if (e.stonePerHourPct) eff.cityYieldMul.stone *= 1 + e.stonePerHourPct / 100;
+      if (e.goldPerHourPct) eff.cityYieldMul.gold *= 1 + e.goldPerHourPct / 100;
       if (e.storageCapAllPct) { D.RESOURCE_TYPES.forEach((r) => { eff.storageCap[r] *= 1 + e.storageCapAllPct / 100; }); }
       if (e.infantryAtkPct) eff.unitAtkPct.infantry = (eff.unitAtkPct.infantry || 0) + e.infantryAtkPct;
       if (e.cavalryAtkPct) eff.unitAtkPct.cavalry = (eff.unitAtkPct.cavalry || 0) + e.cavalryAtkPct;
@@ -85,20 +84,33 @@
   }
 
   const CAPITAL_DAILY_INGOT_YIELD = 50;
-  const CITY_DAILY_INGOT_MUL = 0.5; // 非首都城池的每日固定元寶產出，為首都的一半。
+  const CITY_DAILY_INGOT_MUL = 0.5; // 非主城的每日固定元寶產出，為主城的一半。
+  const CAPITAL_YIELD_MUL = 2; // 主城的固定資源產出，為一般城池（同等級）的兩倍。
 
-  /** 每座已攻佔城池每天固定產出的元寶（抽獎貨幣）：首都全額、其他城池半額。
+  /** 每座已攻佔城池每天固定產出的元寶（抽獎貨幣）：主城全額、其他城池半額。
    *  跟一般資源產出分開計算，元寶不受倉庫上限限制、也不會被攻城掠奪。 */
   function cityDailyIngotYield(city) {
-    const isCapital = !!(city.buildings.capital && city.buildings.capital.level > 0);
-    return CAPITAL_DAILY_INGOT_YIELD * (isCapital ? 1 : CITY_DAILY_INGOT_MUL);
+    return CAPITAL_DAILY_INGOT_YIELD * (city.isCapital ? 1 : CITY_DAILY_INGOT_MUL);
   }
 
   /**
-   * 依經過的時間結算一個 PlayerState 的資源產出：一般資源（糧食／木材／石料／
-   * 銀兩）全部來自地圖上已佔領的產地／土地格每分鐘固定產出（乘上農耕術等科技
-   * 加成），歸入第一座城池的結算時間點一併發放；每座城池另外各自累計自己
-   * 固定的每日元寶產出。
+   * 單一城池自己固定的每小時資源產出（糧食／木材／石料／銀兩同一個數字），
+   * 依城池等級（buildings.capital，兼作「城池等級」）換算，不需要佔領地圖上
+   * 的任何產地／土地格；主城產出為一般城池（同等級）的兩倍。城池等級 0
+   * （尚未開始建設，例如剛攻下的城池）沒有任何固定產出。
+   */
+  function cityFixedYieldPerHour(city) {
+    const level = city.buildings.capital.level;
+    if (level <= 0) return 0;
+    const rate = D.buildingLevelDef('capital', level).effect.cityYieldPerHour || 0;
+    return rate * (city.isCapital ? CAPITAL_YIELD_MUL : 1);
+  }
+
+  /**
+   * 依經過的時間結算一個 PlayerState 的資源產出：每座城池依自己的城池等級各自
+   * 固定產出四種資源（乘上農耕術等科技加成），再加上地圖上已佔領產地／土地格
+   * 的每分鐘固定產出（歸入第一座城池的結算時間點一併發放）；每座城池另外
+   * 各自累計自己固定的每日元寶產出。
    * @param {SaveGame} saveGame
    * @param {PlayerState} playerState
    * @param {number} now
@@ -111,9 +123,10 @@
       if (elapsedMs <= 0) { city.lastResourceTickAt = now; return; }
       const hours = elapsedMs / 3600000;
       const minutes = elapsedMs / 60000;
+      const cityRate = cityFixedYieldPerHour(city);
       const tileYield = idx === 0 ? window.Game.Systems.Map.ownedResourceYieldPerMin(saveGame.map, playerState.factionId) : {};
       D.RESOURCE_TYPES.forEach((r) => {
-        const gain = (tileYield[r] || 0) * eff.tileYieldMul[r] * minutes;
+        const gain = cityRate * eff.cityYieldMul[r] * hours + (tileYield[r] || 0) * minutes;
         playerState.resources[r] = U.clamp(playerState.resources[r] + gain, 0, eff.storageCap[r]);
       });
       playerState.resources.ingot += cityDailyIngotYield(city) * (hours / 24);
@@ -146,5 +159,5 @@
     return Math.round(power);
   }
 
-  window.Game.Systems.Economy = { computeEffects, tick, computePower, cityDailyIngotYield };
+  window.Game.Systems.Economy = { computeEffects, tick, computePower, cityDailyIngotYield, cityFixedYieldPerHour };
 })();
