@@ -29,7 +29,7 @@
       const playerState = saveGame.players[f.id];
       const spot = capitalByFaction[f.id];
       const capitalTile = window.Game.Systems.Map.tileAt(saveGame.map, spot.x, spot.y);
-      const city = M.createCityState('city_' + f.id, f.id, capitalTile.name, spot.x, spot.y, now);
+      const city = M.createCityState('city_' + f.id, f.id, capitalTile.name, spot.x, spot.y, now, true);
       city.buildings.capital.level = 1;
       city.buildings.warehouse.level = 1;
       city.buildings.barracks.level = 1;

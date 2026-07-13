@@ -6,7 +6,14 @@
   const D = window.Game.Data;
   const U = window.Game.Utils;
 
+  /** capital 建築身兼「城池等級」，每座城池（不只主城）各自獨立一份，決定
+   *  該城池其他建築能升到的等級上限。 */
   function capitalCapLevel(city) { return city.buildings.capital.level; }
+
+  /** 一般城池（非主城）只能升級城池等級（capital）與倉庫；兵營／校場／工坊／
+   *  酒館／學院／城牆等內政軍事建築僅主城才能建造，這裡直接在規則層擋掉，
+   *  而不只是畫面上不顯示按鈕，避免有其他呼叫路徑繞過畫面限制。 */
+  const NON_CAPITAL_ALLOWED_TYPES = new Set(['capital', 'warehouse']);
 
   /** 城池目前是否已有任何建築在升級中（同一時間只能升一棟，這是規則而非資料形狀限制）。 */
   function hasActiveUpgrade(city) {
@@ -23,10 +30,11 @@
   }
 
   function canStartUpgrade(city, buildingType) {
+    if (!city.isCapital && !NON_CAPITAL_ALLOWED_TYPES.has(buildingType)) return { ok: false, reason: '一般城池無法建造此建築，僅主城才有' };
     if (hasActiveUpgrade(city)) return { ok: false, reason: '已有建築正在施工' };
     const info = nextUpgradeInfo(city, buildingType);
     if (!info) return { ok: false, reason: '已達最高等級' };
-    if (buildingType !== 'capital' && info.targetLevel > capitalCapLevel(city)) return { ok: false, reason: '需先升級主城' };
+    if (buildingType !== 'capital' && info.targetLevel > capitalCapLevel(city)) return { ok: false, reason: '需先提升城池等級' };
     return { ok: true, info };
   }
 

@@ -35,22 +35,28 @@
     const summary = U.el('div', 'panel resourceSummary');
     summary.appendChild(U.el('div', 'panelTitle', '總覽（全部 ' + Object.keys(playerState.cities).length + ' 座城池合計）'));
 
+    const Economy = window.Game.Systems.Economy;
+    const cityRateRow = U.el('div', 'rateRow');
+    D.RESOURCE_TYPES.forEach((r) => {
+      const perHour = Object.values(playerState.cities).reduce((s, c) => s + Economy.cityFixedYieldPerHour(c), 0) * eff.cityYieldMul[r];
+      cityRateRow.appendChild(U.el('span', 'rateItem', D.RESOURCE_ICONS[r] + ' +' + Math.round(perHour) + '/時'));
+    });
+    summary.appendChild(cityRateRow);
+    summary.appendChild(U.el('div', 'subHint', '每座城池依城池等級固定產出四種資源（不需佔領產地），主城產出為一般城池的兩倍。'));
+
     const tiles = window.Game.Systems.Map.ownedResourceTiles(saveGame.map, playerState.factionId);
     if (tiles.length > 0) {
       const tileYield = window.Game.Systems.Map.ownedResourceYieldPerMin(saveGame.map, playerState.factionId);
       const tileRow = U.el('div', 'rateRow tileYieldRow');
       D.RESOURCE_TYPES.forEach((r) => {
-        const perMin = tileYield[r] * eff.tileYieldMul[r];
-        if (perMin > 0) tileRow.appendChild(U.el('span', 'rateItem tileYieldItem', D.RESOURCE_ICONS[r] + ' +' + (Math.round(perMin * 10) / 10) + '/分'));
+        if (tileYield[r] > 0) tileRow.appendChild(U.el('span', 'rateItem tileYieldItem', D.RESOURCE_ICONS[r] + ' +' + tileYield[r] + '/分（產地）'));
       });
       summary.appendChild(tileRow);
-      summary.appendChild(U.el('div', 'subHint', '已佔領 ' + tiles.length + ' 個產地／土地格，持續固定產出中（不需駐守）。一般資源全部來自這些地塊，城池建築不再直接生產資源。'));
-    } else {
-      summary.appendChild(U.el('div', 'subHint', '目前尚未佔領任何產地／土地格，前往地圖出兵佔領以取得糧食／木材／石料／銀兩產出。'));
+      summary.appendChild(U.el('div', 'subHint', '另外已佔領 ' + tiles.length + ' 個產地／土地格，持續固定產出中（不需駐守）。'));
     }
 
     if (eff.dailyIngotYield > 0) {
-      summary.appendChild(U.el('div', 'subHint', '每座已攻佔城池每天固定產出元寶（首都全額、其他城池半額）：🧧 +' + eff.dailyIngotYield + '/天'));
+      summary.appendChild(U.el('div', 'subHint', '每座已攻佔城池每天固定產出元寶（主城全額、其他城池半額）：🧧 +' + eff.dailyIngotYield + '/天'));
     }
 
     const popUsed = window.Game.Systems.Army.leadershipUsedByFaction(playerState);
@@ -66,20 +72,31 @@
       const def = D.buildingDefById(type);
       if (b.upgrade && def) {
         const box = U.el('div', 'panel buildingInProgress');
-        box.appendChild(U.el('div', 'panelTitle', '施工中：' + def.name + ' → ' + b.upgrade.targetLevel + ' 級'));
+        box.appendChild(U.el('div', 'panelTitle', '施工中：' + buildingDisplayName(city, type) + ' → ' + b.upgrade.targetLevel + ' 級'));
         box.appendChild(U.el('div', 'timerText', formatCountdown(Math.max(0, b.upgrade.completeAt - U.now()))));
         container.appendChild(box);
       }
     });
 
     container.appendChild(U.el('div', 'panelTitle citySectionTitle', '城池建設：' + city.name));
+    if (!city.isCapital) {
+      container.appendChild(U.el('div', 'subHint', '一般城池只能升級城池等級與倉庫；兵營／校場／工坊／酒館／學院／城牆等內政軍事建築僅主城才有。'));
+    }
     const list = U.el('div', 'buildingList');
-    D.BUILDING_ORDER.forEach((type) => {
+    const buildingTypes = city.isCapital ? D.BUILDING_ORDER : ['capital', 'warehouse'];
+    buildingTypes.forEach((type) => {
       list.appendChild(buildingCard(container, saveGame, playerState, city, type));
     });
     container.appendChild(list);
 
     renderAchievementsPanel(container, playerState);
+  }
+
+  /** capital 建築身兼「城池等級」：只有主城才顯示「主城」這個名字，一般城池
+   *  顯示「城池等級」，避免玩家誤以為每座城池都是勢力的主城。 */
+  function buildingDisplayName(city, type) {
+    if (type === 'capital' && !city.isCapital) return '城池等級';
+    return D.buildingDefById(type).name;
   }
 
   function buildingCard(container, saveGame, playerState, city, type) {
@@ -89,7 +106,7 @@
     const card = U.el('div', 'buildingCard');
     const head = U.el('div', 'buildingHead');
     head.appendChild(U.el('span', 'buildingIcon', def.icon));
-    head.appendChild(U.el('span', 'buildingName', def.name));
+    head.appendChild(U.el('span', 'buildingName', buildingDisplayName(city, type)));
     head.appendChild(U.el('span', 'buildingLevel', b.level > 0 ? 'Lv.' + b.level : '未建造'));
     card.appendChild(head);
     card.appendChild(U.el('div', 'buildingDesc', def.desc));
