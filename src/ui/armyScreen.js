@@ -164,7 +164,7 @@
     if (army.status === 'fighting') {
       const destName = marchTargetName(saveGame, playerState, army);
       card.appendChild(U.el('div', 'armyDestination', '交戰地點：' + destName));
-      const activeBattle = saveGame.activeBattles && saveGame.activeBattles[army.targetTileId];
+      const activeBattle = window.Game.Systems.Combat.activeBattleForArmy(saveGame, army.id, U.now());
       if (activeBattle) {
         const progress = U.clamp((U.now() - activeBattle.startAt) / Math.max(1, activeBattle.endAt - activeBattle.startAt), 0, 1);
         const barWrap = U.el('div', 'marchBarWrap');

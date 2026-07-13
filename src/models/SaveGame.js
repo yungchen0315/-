@@ -22,11 +22,13 @@
    *   天下大勢的最終結局：玩家滅盡所有 AI 勢力＝victory（天下統一），玩家主城被攻陷＝
    *   defeat（敗亡）。由 gameLoopSystem.checkWorldOutcome 判定一次後寫入，bootstrap
    *   據此顯示結局畫面（acknowledged 記錄玩家是否已看過，避免重複跳出）。
-   * @property {Object<string,Object>} activeBattles 以地圖 tile id（"x_y"）為 key，記錄該格
-   *   「目前正在進行中」的地圖戰鬥（見 combatSystem.resolveArmyArrival／resolveActiveBattles）：
-   *   部隊抵達目標後不會立即結算，而是先登記一場進行中的戰鬥，地圖上會顯示交戰標記，
-   *   玩家點進該格能看到「觀戰」按鈕即時重播；時間到了才會真正結算傷亡／掠奪／佔領並移除
-   *   此筆紀錄。不存在或已過期即代表該格目前沒有戰鬥在進行。
+   * @property {Object<string,Object>} activeBattles 以出征部隊 armyId 為 key（每筆紀錄內仍
+   *   帶有 tileId），記錄「目前正在進行中」的地圖戰鬥（見 combatSystem.resolveArmyArrival／
+   *   resolveActiveBattles）：部隊抵達目標後不會立即結算，而是先登記一場進行中的戰鬥，地圖上
+   *   會顯示交戰標記，玩家點進該格能看到「觀戰」按鈕即時重播；時間到了才會真正結算傷亡／掠奪／
+   *   佔領並移除此筆紀錄。不存在或已過期即代表該支部隊／該格目前沒有戰鬥在進行。以 armyId 為
+   *   key 是因為同一地塊可能同時有多支部隊交戰（例如兩軍同時攻打同一據點），用 tile id 當 key
+   *   會讓後到的部隊覆蓋掉先到部隊的記錄，使先到部隊卡在 fighting 狀態卻永遠等不到結算。
    */
 
   /**
