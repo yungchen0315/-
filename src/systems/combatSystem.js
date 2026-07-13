@@ -64,11 +64,6 @@
     return bonus;
   }
 
-  function heroLevelIn(playerState, heroStateId) {
-    const h = playerState && playerState.heroes[heroStateId];
-    return h ? h.level : 1;
-  }
-
   /** 把一份戰鬥加成累加進另一份（供整隊多武將的技能／裝備效果疊加）。 */
   function mergeCombatBonus(into, add) {
     ['atkPct', 'defPct', 'hpPct', 'lossReductionPct', 'lootBonusPct', 'enemyAtkPct', 'enemyDefPct', 'firstStrikePct']
@@ -84,9 +79,35 @@
     return bonus;
   }
 
-  // 副將對「基礎戰力乘數（武力＋統率換算）」的貢獻權重：主將全額、副將打折，
-  // 避免單純多塞武將就等比暴力放大戰力，但仍讓多武將編隊明顯更強。
+  // 副將對「武力／智力戰力加成」的貢獻權重：主將全額、副將打折，避免單純多塞
+  // 武將就等比暴力放大戰力，但仍讓多武將編隊明顯更強。統率（cmd）不在此列——
+  // 統率只決定 heroSystem.armyLeadershipCap（部隊帶兵上限），跟戰力無關。
   const SUB_HERO_STAT_WEIGHT = 0.4;
+  // 智力對敵軍的壓制最高只能到 70%，超出上限的智力轉為己方戰力加成，
+  // 避免智力堆到極端時直接讓敵軍形同兵力歸零。
+  const INTEL_SUPPRESS_CAP_PCT = 70;
+
+  /**
+   * 隊上全部武將「武力」「智力」的加權加總：
+   * - 武力：直接加到自身戰力（%）。
+   * - 智力：壓制敵軍戰力（%），超過 INTEL_SUPPRESS_CAP_PCT 的部分轉為己方戰力加成。
+   * 有 playerState 時讀等級／裝備換算後的即時數值（heroSystem.effectiveStats），
+   * 沒有（例如劇情關卡的敵軍）則退回武將定義的 1 級基礎數值。
+   */
+  function squadStatBonus(playerState, heroIds) {
+    let forcePct = 0, rawIntelPct = 0;
+    heroIds.forEach((id, idx) => {
+      const heroState = playerState && playerState.heroes[id];
+      const stats = heroState ? window.Game.Systems.Hero.effectiveStats(heroState) : (D.heroDefById(id) || {}).baseStats;
+      if (!stats) return;
+      const weight = idx === 0 ? 1 : SUB_HERO_STAT_WEIGHT;
+      forcePct += weight * stats.force;
+      rawIntelPct += weight * stats.intel;
+    });
+    const suppressPct = U.clamp(rawIntelPct, 0, INTEL_SUPPRESS_CAP_PCT);
+    forcePct += Math.max(0, rawIntelPct - INTEL_SUPPRESS_CAP_PCT);
+    return { forcePct, suppressPct };
+  }
 
   function sideCombatStats(units, heroIds, eff, playerState, isAttacker) {
     heroIds = (heroIds || []).filter(Boolean);
@@ -104,18 +125,11 @@
       def += qty * d.stats.def * (1 + (eff.allDefPct || 0) / 100);
       hp += qty * d.stats.hp;
     });
-    let heroMul = 1;
-    heroIds.forEach((id, idx) => {
-      const heroDef = D.heroDefById(id);
-      if (!heroDef) return;
-      const level = heroLevelIn(playerState, id);
-      const weight = idx === 0 ? 1 : SUB_HERO_STAT_WEIGHT;
-      heroMul += weight * ((heroDef.baseStats.force + heroDef.baseStats.cmd) / 400 + (level - 1) * 0.015);
-    });
-    atk *= heroMul * (1 + (bonus.atkPct + bonus.firstStrikePct) / 100);
+    const statBonus = squadStatBonus(playerState, heroIds);
+    atk *= (1 + statBonus.forcePct / 100) * (1 + (bonus.atkPct + bonus.firstStrikePct) / 100);
     def *= 1 + bonus.defPct / 100;
     hp *= 1 + bonus.hpPct / 100;
-    return { atk, def, hp, bonus };
+    return { atk, def, hp, bonus, suppressPct: statBonus.suppressPct };
   }
 
   const TURN_DMG_SCALE = 6;
@@ -202,10 +216,10 @@
     const defenderHeroIds = [defenderHeroStateId].concat(defenderSubHeroStateIds || []).filter(Boolean);
 
     const atkStats = sideCombatStats(attackerUnits, attackerHeroIds, attackerEff || {}, attackerPlayerState, true);
-    let defAtk = 0, defDef = 0, defHp = 0, defBonus = emptyCombatBonus();
+    let defAtk = 0, defDef = 0, defHp = 0, defBonus = emptyCombatBonus(), defSuppressPct = 0;
     if (defenderUnits) {
       const dStats = sideCombatStats(defenderUnits, defenderHeroIds, defenderEff || {}, defenderPlayerState, false);
-      defAtk = dStats.atk; defDef = dStats.def; defHp = dStats.hp; defBonus = dStats.bonus;
+      defAtk = dStats.atk; defDef = dStats.def; defHp = dStats.hp; defBonus = dStats.bonus; defSuppressPct = dStats.suppressPct;
     }
     if (defenderStaticGuard) {
       defAtk += defenderStaticGuard * 0.6;
@@ -220,9 +234,12 @@
     const atkCounterMul = (1 + COUNTER_BONUS * atkCounters) * (1 - COUNTER_BONUS * defCounters);
     const defCounterMul = (1 + COUNTER_BONUS * defCounters) * (1 - COUNTER_BONUS * atkCounters);
     defAtk *= defCounterMul;
+    // 智力壓制：攻方智力削弱守方攻擊力，守方智力削弱攻方攻擊力（皆已在 sideCombatStats
+    // 摺算成 0~70% 的 suppressPct，超出 70% 的部分早已轉為施法方自己的戰力加成）。
+    defAtk *= 1 - atkStats.suppressPct / 100;
     defDef *= 1 + (wallBonusPct || 0) / 100;
     defDef *= 1 + (atkStats.bonus.enemyDefPct || 0) / 100;
-    const attackerAtkFinal = atkStats.atk * (1 + (defBonus.enemyAtkPct || 0) / 100) * atkCounterMul;
+    const attackerAtkFinal = atkStats.atk * (1 + (defBonus.enemyAtkPct || 0) / 100) * atkCounterMul * (1 - defSuppressPct / 100);
     const attackerLossReductionPct = U.clamp(atkStats.bonus.lossReductionPct, 0, 60);
     const defenderLossReductionPct = U.clamp(defBonus.lossReductionPct, 0, 60);
 

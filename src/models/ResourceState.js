@@ -15,8 +15,9 @@
    * @property {number} stone 石料存量。
    * @property {number} gold 銀兩存量。
    * @property {number} ingot 元寶存量：抽獎專用的獎勵貨幣，不受倉庫上限限制，
-   *   也不計入資源產出／攻城掠奪／野怪戰利品（刻意獨立於 RESOURCE_TYPES 之外，
-   *   只透過戰役／成就／事件獎勵與每日簽到取得）。
+   *   不計入攻城掠奪／野怪戰利品（刻意獨立於 RESOURCE_TYPES 之外），主要透過戰役／
+   *   成就／事件獎勵與每日簽到取得；另外每座已攻佔的城池每天固定產出少量元寶
+   *   （首都全額、其他城池半額，見 economySystem.cityDailyIngotYield／tick）。
    */
 
   /**

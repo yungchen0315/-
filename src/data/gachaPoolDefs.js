@@ -8,17 +8,21 @@
    * @typedef {Object} GachaPoolDef
    * @property {string} id
    * @property {string} name
+   * @property {'hero'|'tactic'} [kind] 池的種類，預設 'hero'（武將＋裝備混池）；
+   *   'tactic' 為戰法池，只抽獨立戰法（不含武將招牌戰法，那個只能靠擁有該武將取得）。
    * @property {number} costSingle 單抽消耗元寶。
    * @property {number} costTen 十連消耗元寶（略低於單抽 x10，鼓勵十連）。
-   * @property {[number,number]} heroRarityRange 池內武將稀有度範圍（含端點）。
-   * @property {[number,number]} itemTierRange 池內裝備 tier 範圍（含端點）。
+   * @property {[number,number]} [heroRarityRange] kind 為 'hero' 時，池內武將稀有度範圍（含端點）。
+   * @property {[number,number]} [itemTierRange] kind 為 'hero' 時，池內裝備 tier 範圍（含端點）。
+   * @property {[number,number]} [tacticRarityRange] kind 為 'tactic' 時，池內戰法星級範圍（含端點）。
    */
 
   /** @type {GachaPoolDef[]} */
   const GACHA_POOLS = [
-    { id: 'bronze', name: '銅池', costSingle: 100, costTen: 900, heroRarityRange: [2, 3], itemTierRange: [1, 2] },
-    { id: 'silver', name: '銀池', costSingle: 300, costTen: 2700, heroRarityRange: [2, 4], itemTierRange: [1, 3] },
-    { id: 'gold', name: '金池', costSingle: 600, costTen: 5400, heroRarityRange: [3, 5], itemTierRange: [2, 5] }
+    { id: 'bronze', name: '銅池', kind: 'hero', costSingle: 100, costTen: 900, heroRarityRange: [2, 3], itemTierRange: [1, 2] },
+    { id: 'silver', name: '銀池', kind: 'hero', costSingle: 300, costTen: 2700, heroRarityRange: [2, 4], itemTierRange: [1, 3] },
+    { id: 'gold', name: '金池', kind: 'hero', costSingle: 600, costTen: 5400, heroRarityRange: [3, 5], itemTierRange: [2, 5] },
+    { id: 'tactic', name: '兵法閣', kind: 'tactic', costSingle: 150, costTen: 1350, tacticRarityRange: [1, 5] }
   ];
 
   /** 稀有度／tier（共用 1~5 分級）對應的抽中權重，數字越大越常出現。 */

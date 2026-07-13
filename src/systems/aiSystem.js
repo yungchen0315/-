@@ -19,7 +19,45 @@
     tryTrain(playerState, now);
     tryResearch(playerState, now);
     tryRecruit(playerState);
+    tryAssignGenerals(playerState);
+    tryEquip(playerState);
     tryMarch(saveGame, playerState, now);
+  }
+
+  /** 部隊出征需要主將帶隊（統率決定帶兵上限，多武將的統率上限相加、戰力也一起
+   *  疊加），把手上還沒編隊的武將盡量塞進駐守部隊（先補主將，再補滿副將），
+   *  讓 AI 一拿到武將（開局起始武將／酒館抽到）就能發揮戰力、也能帶更多兵出征。 */
+  function tryAssignGenerals(playerState) {
+    const Hero = window.Game.Systems.Hero;
+    const idle = Object.values(playerState.heroes).filter((h) => !h.assignedArmyId);
+    if (!idle.length) return;
+    const garrisonArmies = Object.values(playerState.armies).filter((a) => a.status === 'garrison');
+    garrisonArmies.forEach((army) => {
+      while (idle.length && (!army.heroStateId || (army.subHeroStateIds || []).length < Hero.SQUAD_SUB_MAX)) {
+        const hero = idle.shift();
+        if (!Hero.assignHeroToArmy(playerState, hero.heroDataId, army).ok) { idle.unshift(hero); break; }
+      }
+    });
+  }
+
+  /** 把武將身上還空著的裝備／戰法欄位，用庫存裡還沒用掉的東西補滿（裝備挑最高
+   *  tier、戰法挑第一個可用的），讓 AI 抽到的獎池結果實際發揮效果，而不是堆在
+   *  倉庫裡沒用——跟玩家手動裝配的效果完全一致，只是自動化決策。 */
+  function tryEquip(playerState) {
+    const Hero = window.Game.Systems.Hero;
+    Object.keys(playerState.heroes).forEach((heroId) => {
+      const hs = playerState.heroes[heroId];
+      D.ITEM_SLOTS.forEach((slot) => {
+        if (hs.equipment[slot]) return;
+        const owned = Object.keys(playerState.inventory || {})
+          .filter((itemId) => (playerState.inventory[itemId] || 0) > 0 && D.itemDefById(itemId) && D.itemDefById(itemId).slot === slot)
+          .sort((a, b) => D.itemDefById(b).tier - D.itemDefById(a).tier);
+        if (owned.length) Hero.equipItem(playerState, heroId, owned[0]);
+      });
+      if ((hs.tactics || []).length >= Hero.TACTIC_SLOTS) return;
+      const available = Hero.availableTacticsForHero(playerState, heroId);
+      available.forEach((t) => { if (hs.tactics.length < Hero.TACTIC_SLOTS) Hero.equipTactic(playerState, heroId, t.id); });
+    });
   }
 
   // 全部使用 aiTick 傳入的模擬時間 now，不能用 U.now()（真實系統時間）——
@@ -30,7 +68,18 @@
     if (!city) return;
     const CityBuilding = window.Game.Systems.CityBuilding;
     if (CityBuilding.hasActiveUpgrade(city)) return;
-    const candidates = D.BUILDING_ORDER.filter((type) => CityBuilding.canStartUpgrade(city, type).ok);
+    // 主城等級決定其他建築能升到的上限（見 cityBuildingSystem.canStartUpgrade），
+    // 隨機挑建築升級會讓主城長期落後、卡住整座城的發展，優先把主城升上去。
+    const capitalCheck = CityBuilding.canStartUpgrade(city, 'capital');
+    if (capitalCheck.ok && U.canAfford(playerState.resources, capitalCheck.info.cost)) {
+      CityBuilding.startUpgrade(playerState, city, 'capital', now);
+      return;
+    }
+    const candidates = D.BUILDING_ORDER.filter((type) => {
+      if (type === 'capital') return false;
+      const check = CityBuilding.canStartUpgrade(city, type);
+      return check.ok && U.canAfford(playerState.resources, check.info.cost);
+    });
     if (candidates.length === 0) return;
     CityBuilding.startUpgrade(playerState, city, U.choice(candidates), now);
   }
@@ -63,8 +112,18 @@
 
   function tryMarch(saveGame, playerState, now) {
     const Army = window.Game.Systems.Army;
+    const Hero = window.Game.Systems.Hero;
     const Econ = window.Game.Systems.Economy;
-    const home = Object.values(playerState.armies).find((a) => a.status === 'garrison' && Army.unitCount(a) > 40);
+    // 出征門檻不再固定 40 兵：部隊出征現在需要主將帶隊、且不能超過統率上限，
+    // 用固定門檻在統率上限較低（cmd 較小或還沒配武將）時會讓 AI 永遠出不了兵
+    // ——改成「至少 10 兵，且不超過該部隊主將可統帥的上限」，讓 AI 一有能出征
+    // 的部隊就儘早出動，而不是苦等一個未必達得到的兵力門檻。
+    const home = Object.values(playerState.armies).find((a) => {
+      if (a.status !== 'garrison' || !a.heroStateId) return false;
+      const count = Army.unitCount(a);
+      if (count < 10) return false;
+      return count <= Hero.armyLeadershipCap(playerState, a);
+    });
     if (!home) return;
     if (Math.random() > 0.35) return;
 

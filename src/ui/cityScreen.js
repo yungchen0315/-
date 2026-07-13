@@ -34,22 +34,23 @@
 
     const summary = U.el('div', 'panel resourceSummary');
     summary.appendChild(U.el('div', 'panelTitle', '總覽（全部 ' + Object.keys(playerState.cities).length + ' 座城池合計）'));
-    const rateRow = U.el('div', 'rateRow');
-    rateRow.appendChild(U.el('span', 'rateItem', D.RESOURCE_ICONS.food + ' +' + Math.round(eff.foodPerHour) + '/時'));
-    rateRow.appendChild(U.el('span', 'rateItem', D.RESOURCE_ICONS.wood + ' +' + Math.round(eff.woodPerHour) + '/時'));
-    rateRow.appendChild(U.el('span', 'rateItem', D.RESOURCE_ICONS.stone + ' +' + Math.round(eff.stonePerHour) + '/時'));
-    rateRow.appendChild(U.el('span', 'rateItem', D.RESOURCE_ICONS.gold + ' +' + Math.round(eff.goldPerHour) + '/時'));
-    summary.appendChild(rateRow);
 
     const tiles = window.Game.Systems.Map.ownedResourceTiles(saveGame.map, playerState.factionId);
     if (tiles.length > 0) {
       const tileYield = window.Game.Systems.Map.ownedResourceYieldPerMin(saveGame.map, playerState.factionId);
       const tileRow = U.el('div', 'rateRow tileYieldRow');
       D.RESOURCE_TYPES.forEach((r) => {
-        if (tileYield[r] > 0) tileRow.appendChild(U.el('span', 'rateItem tileYieldItem', D.RESOURCE_ICONS[r] + ' +' + tileYield[r] + '/分（產地）'));
+        const perMin = tileYield[r] * eff.tileYieldMul[r];
+        if (perMin > 0) tileRow.appendChild(U.el('span', 'rateItem tileYieldItem', D.RESOURCE_ICONS[r] + ' +' + (Math.round(perMin * 10) / 10) + '/分'));
       });
       summary.appendChild(tileRow);
-      summary.appendChild(U.el('div', 'subHint', '已佔領 ' + tiles.length + ' 個產地，持續固定產出中（不需駐守）。'));
+      summary.appendChild(U.el('div', 'subHint', '已佔領 ' + tiles.length + ' 個產地／土地格，持續固定產出中（不需駐守）。一般資源全部來自這些地塊，城池建築不再直接生產資源。'));
+    } else {
+      summary.appendChild(U.el('div', 'subHint', '目前尚未佔領任何產地／土地格，前往地圖出兵佔領以取得糧食／木材／石料／銀兩產出。'));
+    }
+
+    if (eff.dailyIngotYield > 0) {
+      summary.appendChild(U.el('div', 'subHint', '每座已攻佔城池每天固定產出元寶（首都全額、其他城池半額）：🧧 +' + eff.dailyIngotYield + '/天'));
     }
 
     const popUsed = window.Game.Systems.Army.leadershipUsedByFaction(playerState);
@@ -62,9 +63,10 @@
     const hasActiveUpgrade = window.Game.Systems.CityBuilding.hasActiveUpgrade(city);
     Object.keys(city.buildings).forEach((type) => {
       const b = city.buildings[type];
-      if (b.upgrade) {
+      const def = D.buildingDefById(type);
+      if (b.upgrade && def) {
         const box = U.el('div', 'panel buildingInProgress');
-        box.appendChild(U.el('div', 'panelTitle', '施工中：' + D.buildingDefById(type).name + ' → ' + b.upgrade.targetLevel + ' 級'));
+        box.appendChild(U.el('div', 'panelTitle', '施工中：' + def.name + ' → ' + b.upgrade.targetLevel + ' 級'));
         box.appendChild(U.el('div', 'timerText', formatCountdown(Math.max(0, b.upgrade.completeAt - U.now()))));
         container.appendChild(box);
       }

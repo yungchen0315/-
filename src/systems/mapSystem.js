@@ -41,6 +41,27 @@
     ]
   };
 
+  /* ------------------------------------------------------------------------
+   * 資源格等級：baseYieldPerMin／baseGuardPower 是生成時定下、永遠不變的基準值；
+   * 目前的 yieldPerMin／guardPower 一律由 applyTileLevel() 依 level 從基準值重新
+   * 算出（絕不直接疊乘 yieldPerMin/guardPower 本身，避免升級或存讀檔造成複利式
+   * 灌水）。等級只能靠佔領後花資源升級取得，但少數格子開局就落在較高等級——
+   * 產量更高，駐守的守備力也同步更高，需要更強的兵力才能打下來。
+   * ------------------------------------------------------------------------ */
+  const TILE_LEVEL_MAX = 5;
+  function tileLevelYieldMul(level) { return 1 + 0.5 * ((level || 1) - 1); }
+  function tileLevelGuardMul(level) { return 1 + 0.35 * ((level || 1) - 1); }
+
+  /** 依 tile.level 與基準值重算目前的 yieldPerMin／guardPower。 */
+  function applyTileLevel(t) {
+    const lvl = t.level || 1;
+    t.yieldPerMin = Math.max(1, Math.round((t.baseYieldPerMin || 1) * tileLevelYieldMul(lvl)));
+    t.guardPower = Math.max(1, Math.round((t.baseGuardPower || 1) * tileLevelGuardMul(lvl)));
+  }
+
+  /** 開局約 15% 的資源格／土地格落在較高等級（2~3 級）：產量與守備力開局就比同類型格子高。 */
+  function rollInitialTileLevel() { return Math.random() < 0.15 ? U.randomInt(2, 3) : 1; }
+
   function capitalSpotsFor(w, h) {
     const margin = Math.max(3, Math.round(w * 0.14));
     return {
@@ -127,10 +148,12 @@
         if (resourceCount < RESOURCE_PER_REGION && (monsterCount >= MONSTER_PER_REGION || Math.random() < 0.6)) {
           t.type = 'resource';
           t.resourceType = resourcePool[resourceCount % resourcePool.length];
-          t.guardPower = U.randomInt(40, 160);
-          t.yieldPerMin = Math.max(2, Math.round(t.guardPower / 20));
+          t.baseGuardPower = U.randomInt(40, 160);
+          t.baseYieldPerMin = Math.max(2, Math.round(t.baseGuardPower / 20));
           t.name = D.RESOURCE_NAMES[t.resourceType] + '產地';
           t.ownerFactionId = null;
+          t.level = rollInitialTileLevel();
+          applyTileLevel(t);
           resourceCount++;
         } else if (monsterCount < MONSTER_PER_REGION) {
           t.type = 'monster';
@@ -170,8 +193,10 @@
     t.ownerFactionId = null;
     t.resourceType = profile.resourceType;
     t.name = profile.name;
-    t.guardPower = 15 + dist * 4 + U.randomInt(0, 20);
-    t.yieldPerMin = 1 + Math.round(t.guardPower / 60);
+    t.baseGuardPower = 15 + dist * 4 + U.randomInt(0, 20);
+    t.baseYieldPerMin = 1 + Math.round(t.baseGuardPower / 60);
+    t.level = rollInitialTileLevel();
+    applyTileLevel(t);
   }
 
   /** 把地圖上所有剩餘空地轉為可佔領的土地格。開新地圖與舊存檔載入時共用。 */
@@ -252,6 +277,28 @@
     const captureBonus = Math.round(tile.guardPower * 1.5 * captureMul);
     const eff = window.Game.Systems.Economy.computeEffects(playerState);
     playerState.resources[tile.resourceType] = U.clamp(playerState.resources[tile.resourceType] + captureBonus, 0, eff.storageCap[tile.resourceType]);
+  }
+
+  /** 把一格資源格／土地格從目前等級升到下一級所需的木材／石料花費，隨等級與基準產量提高。 */
+  function resourceTileUpgradeCost(tile) {
+    const lvl = tile.level || 1;
+    const scale = Math.round((tile.baseYieldPerMin || 1) * 25 * lvl);
+    return { wood: scale, stone: Math.round(scale * 0.6) };
+  }
+
+  /** 已佔領的資源格／土地格花資源升級一級：產量與守備力一併依 applyTileLevel 提高
+   *（守備力提高只影響「敵人之後想搶走這格」的難度，不影響現任擁有者，永久佔領不需再駐守）。 */
+  function upgradeResourceTile(playerState, tile) {
+    if (!tile || tile.type !== 'resource') return { ok: false, reason: '此地無法升級' };
+    if (tile.ownerFactionId !== playerState.factionId) return { ok: false, reason: '尚未佔領此地，無法升級' };
+    const level = tile.level || 1;
+    if (level >= TILE_LEVEL_MAX) return { ok: false, reason: '已達最高等級' };
+    const cost = resourceTileUpgradeCost(tile);
+    if (!U.canAfford(playerState.resources, cost)) return { ok: false, reason: '資源不足' };
+    U.subtractResources(playerState.resources, cost);
+    tile.level = level + 1;
+    applyTileLevel(tile);
+    return { ok: true };
   }
 
   /**
@@ -362,9 +409,10 @@
   }
 
   window.Game.Systems.Map = {
-    TERRITORY_REACH,
+    TERRITORY_REACH, TILE_LEVEL_MAX,
     generateMap, convertEmptyTilesToLand, tileAt, capitalTileOf, captureResourceTile, captureCityTile,
     ownedResourceTiles, ownedResourceYieldPerMin, capturableCityTiles,
-    ownedTiles, isValidAttackTarget, territoryReachKeys, attackableTargetKeys, canAttackTile
+    ownedTiles, isValidAttackTarget, territoryReachKeys, attackableTargetKeys, canAttackTile,
+    resourceTileUpgradeCost, upgradeResourceTile, applyTileLevel
   };
 })();

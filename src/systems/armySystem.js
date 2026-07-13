@@ -101,6 +101,11 @@
     if (!army) return { ok: false, reason: '找不到部隊' };
     if (army.status !== 'garrison') return { ok: false, reason: '部隊行軍中' };
     if (unitCount(army) === 0) return { ok: false, reason: '部隊沒有兵力' };
+    if (!army.heroStateId) return { ok: false, reason: '尚未指派主將，無法出征——請先指派一名主將帶隊' };
+    const leadershipCap = window.Game.Systems.Hero.armyLeadershipCap(playerState, army);
+    if (leadershipUsed(army) > leadershipCap) {
+      return { ok: false, reason: '兵力超出主將可統帥的上限（' + leadershipUsed(army) + '/' + leadershipCap + '），請指派更多副將或減少兵力' };
+    }
     const targetTileState = saveGame.map.tiles[M.tileKey(targetTile.x, targetTile.y)];
     const reachable = window.Game.Systems.Map.canAttackTile(saveGame.map, playerState.factionId, targetTileState);
     if (!reachable.ok) return { ok: false, reason: reachable.reason };

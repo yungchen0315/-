@@ -102,7 +102,8 @@
       rarityRow.style.color = def.portraitColor;
       body.appendChild(rarityRow);
       body.appendChild(U.el('div', 'generalStats', '武力 ' + stats.force + '　統率 ' + stats.cmd + '　智力 ' + stats.intel));
-      body.appendChild(U.el('div', 'generalCap', '統率上限：可率領兵力總統率需求 ' + Hero.leadershipCap(heroState) + ' 以內'));
+      body.appendChild(U.el('div', 'subHint', '武力：自身戰力 +' + stats.force + '%　智力：壓制敵軍戰力（上限 70%，超出部分轉為自身戰力加成）'));
+      body.appendChild(U.el('div', 'generalCap', '統率上限：可率領兵力總統率需求 ' + Hero.leadershipCap(heroState) + ' 以內（跟戰力無關，只決定能帶多少兵出征）'));
       body.appendChild(U.el('div', 'generalSkill', '【' + def.skill.name + '】' + def.skill.desc));
       const effectText = D.describeSkillEffects(def.skill.effects);
       if (effectText) body.appendChild(U.el('div', 'generalSkillEffect', effectText));
