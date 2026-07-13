@@ -95,6 +95,14 @@
       });
       if (!Array.isArray(p.learnedTactics)) p.learnedTactics = [];
       if (!p.defeated) window.Game.Systems.NewGame.grantStarterHeroIfMissing(p);
+      // 舊存檔可能還留著已刪除建築（糧倉／伐木場／採石場／金礦）的資料，
+      // 這些型別在 D.BUILDING_DEFS 已經不存在，留著只會讓依賴 buildingDefById
+      // 的畫面在讀到孤兒資料時炸掉，直接清掉（連同尚未完工的升級一起作廢）。
+      Object.values(p.cities || {}).forEach((city) => {
+        Object.keys(city.buildings || {}).forEach((type) => {
+          if (!window.Game.Data.buildingDefById(type)) delete city.buildings[type];
+        });
+      });
     });
     if (!saveGame.activeBattles) saveGame.activeBattles = {};
     Object.values((saveGame.map && saveGame.map.tiles) || {}).forEach((t) => {

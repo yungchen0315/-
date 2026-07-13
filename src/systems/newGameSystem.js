@@ -31,9 +31,7 @@
       const capitalTile = window.Game.Systems.Map.tileAt(saveGame.map, spot.x, spot.y);
       const city = M.createCityState('city_' + f.id, f.id, capitalTile.name, spot.x, spot.y, now);
       city.buildings.capital.level = 1;
-      city.buildings.granary.level = 1;
-      city.buildings.sawmill.level = 1;
-      city.buildings.quarry.level = 1;
+      city.buildings.warehouse.level = 1;
       city.buildings.barracks.level = 1;
       playerState.cities[city.id] = city;
     });

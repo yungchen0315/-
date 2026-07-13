@@ -53,54 +53,18 @@
         effect: { maxOtherBuildingLevel: lv, popCap: scale(20, 1.25, lv, 1) }
       }))
     },
-    granary: {
-      id: 'granary', name: '糧倉', icon: '🌾', category: 'economy',
-      desc: '提升糧食每小時產量與存量上限。',
-      levels: buildLevels(MAX_BUILDING_LEVEL, (lv) => ({
-        level: lv,
-        cost: { wood: scale(60, 1.5, lv, 5), stone: scale(20, 1.5, lv, 5) },
-        timeMs: scale(60000, 1.35, lv),
-        effect: { foodPerHour: scale(80, 1.3, lv, 5), storageCap: scale(1000, 1.4, lv, 50) }
-      }))
-    },
-    sawmill: {
-      id: 'sawmill', name: '伐木場', icon: '🪵', category: 'economy',
-      desc: '提升木材每小時產量與存量上限。',
-      levels: buildLevels(MAX_BUILDING_LEVEL, (lv) => ({
-        level: lv,
-        cost: { food: scale(60, 1.5, lv, 5), stone: scale(20, 1.5, lv, 5) },
-        timeMs: scale(60000, 1.35, lv),
-        effect: { woodPerHour: scale(80, 1.3, lv, 5), storageCap: scale(1000, 1.4, lv, 50) }
-      }))
-    },
-    quarry: {
-      id: 'quarry', name: '採石場', icon: '🪨', category: 'economy',
-      desc: '提升石料每小時產量與存量上限。',
-      levels: buildLevels(MAX_BUILDING_LEVEL, (lv) => ({
-        level: lv,
-        cost: { food: scale(60, 1.5, lv, 5), wood: scale(20, 1.5, lv, 5) },
-        timeMs: scale(60000, 1.35, lv),
-        effect: { stonePerHour: scale(60, 1.3, lv, 5), storageCap: scale(1000, 1.4, lv, 50) }
-      }))
-    },
-    goldmine: {
-      id: 'goldmine', name: '金礦', icon: '💰', category: 'economy',
-      desc: '提升銀兩每小時產量與存量上限。',
-      levels: buildLevels(MAX_BUILDING_LEVEL, (lv) => ({
-        level: lv,
-        cost: { wood: scale(80, 1.5, lv, 5), stone: scale(80, 1.5, lv, 5) },
-        timeMs: scale(90000, 1.35, lv),
-        effect: { goldPerHour: scale(40, 1.3, lv, 5), storageCap: scale(800, 1.4, lv, 50) }
-      }))
-    },
+    // 糧倉／伐木場／採石場／金礦（單一資源每小時產出）已移除：一般資源產出改由
+    // 地圖上實際佔領的產地／土地格提供（見 mapSystem／economySystem.tick），城池
+    // 分頁不再重複一套「建築生產」機制。原本這四棟建築同時兼職提升四種資源的
+    // 存量上限，這部分功能整併進倉庫——升級倉庫即可一次提升全部資源的存量上限。
     warehouse: {
       id: 'warehouse', name: '倉庫', icon: '📦', category: 'economy',
-      desc: '額外提升四種資源的存量上限，避免產出溢出浪費。',
+      desc: '提升四種資源的存量上限，避免產出溢出浪費。',
       levels: buildLevels(MAX_BUILDING_LEVEL, (lv) => ({
         level: lv,
-        cost: { wood: scale(100, 1.5, lv, 10), stone: scale(100, 1.5, lv, 10) },
-        timeMs: scale(120000, 1.35, lv),
-        effect: { storageCapAll: scale(500, 1.4, lv, 50) }
+        cost: { wood: scale(120, 1.5, lv, 10), stone: scale(120, 1.5, lv, 10) },
+        timeMs: scale(90000, 1.35, lv),
+        effect: { storageCapAll: scale(1000, 1.42, lv, 50) }
       }))
     },
     barracks: {
@@ -169,8 +133,7 @@
   };
 
   /** 城池建築的預設建造順序，UI 依此順序排列。 */
-  const BUILDING_ORDER = ['capital', 'granary', 'sawmill', 'quarry', 'goldmine', 'warehouse',
-    'barracks', 'drillground', 'workshop', 'tavern', 'academy', 'wall'];
+  const BUILDING_ORDER = ['capital', 'warehouse', 'barracks', 'drillground', 'workshop', 'tavern', 'academy', 'wall'];
 
   function buildingDefById(type) { return BUILDING_DEFS[type]; }
   function buildingLevelDef(type, level) {

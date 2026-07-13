@@ -9,6 +9,8 @@
   const Dlg = window.Game.UI.Dialog;
   const HP = window.Game.UI.HeroPortrait;
 
+  const RARITY_BORDER_COLOR = { 5: '#d4af37', 4: '#a15ec5', 3: '#3a6bb0', 2: '#7a7a7a', 1: '#5a5a5a' };
+
   function resultCard(entry) {
     if (entry.kind === 'hero') {
       const def = D.heroDefById(entry.id);
@@ -18,10 +20,22 @@
       if (entry.duplicate) card.appendChild(U.el('div', 'gachaResultDup', '重複，返還元寶 x' + entry.refund));
       return card;
     }
+    if (entry.kind === 'tactic') {
+      const t = D.tacticDefById(entry.id);
+      const card = U.el('div', 'gachaResultCard');
+      const box = U.el('div', 'gachaResultItemBox');
+      box.style.borderColor = RARITY_BORDER_COLOR[t.rarity] || '#5a5a5a';
+      box.textContent = '📜';
+      card.appendChild(box);
+      card.appendChild(U.el('div', 'gachaResultName', t.name));
+      card.appendChild(U.el('div', 'gachaResultDup', D.describeSkillEffects(t.effects)));
+      if (entry.duplicate) card.appendChild(U.el('div', 'gachaResultDup', '已習得，返還元寶 x' + entry.refund));
+      return card;
+    }
     const item = D.itemDefById(entry.id);
     const card = U.el('div', 'gachaResultCard');
     const box = U.el('div', 'gachaResultItemBox');
-    box.style.borderColor = item.tier >= 5 ? '#d4af37' : item.tier === 4 ? '#a15ec5' : item.tier === 3 ? '#3a6bb0' : '#7a7a7a';
+    box.style.borderColor = RARITY_BORDER_COLOR[item.tier] || '#5a5a5a';
     box.textContent = '⚔️';
     card.appendChild(box);
     card.appendChild(U.el('div', 'gachaResultName', item.name));
@@ -42,8 +56,13 @@
     D.GACHA_POOLS.forEach((pool) => {
       const panel = U.el('div', 'panel gachaPoolPanel gachaPoolPanel_' + pool.id);
       panel.appendChild(U.el('div', 'panelTitle', pool.name));
-      panel.appendChild(U.el('div', 'subHint', '武將稀有度 ' + pool.heroRarityRange[0] + '~' + pool.heroRarityRange[1] +
-        '　裝備 tier ' + pool.itemTierRange[0] + '~' + pool.itemTierRange[1]));
+      if (pool.kind === 'tactic') {
+        panel.appendChild(U.el('div', 'subHint', '戰法星級 ' + pool.tacticRarityRange[0] + '~' + pool.tacticRarityRange[1] +
+          '　只會抽到不綁武將的獨立戰法，武將專屬招牌戰法無法透過獎池取得'));
+      } else {
+        panel.appendChild(U.el('div', 'subHint', '武將稀有度 ' + pool.heroRarityRange[0] + '~' + pool.heroRarityRange[1] +
+          '　裝備 tier ' + pool.itemTierRange[0] + '~' + pool.itemTierRange[1]));
+      }
 
       const row = U.el('div', 'gachaDrawRow');
       const singleBtn = U.el('button', 'smallBtn' + (tavernBuilt ? '' : ' disabled'), '單抽 🧧' + pool.costSingle);

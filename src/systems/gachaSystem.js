@@ -35,10 +35,17 @@
   /**
    * @param {GachaPoolDef} pool
    * @param {string} factionId 只招募該勢力自己的武將——每位武將僅歸屬單一勢力
-   *   （HeroData.factionId），裝備則不分勢力。
-   * @returns {Array<{kind:'hero'|'item', id:string, weight:number}>}
+   *   （HeroData.factionId），裝備／戰法則不分勢力。
+   * @returns {Array<{kind:'hero'|'item'|'tactic', id:string, weight:number}>}
    */
   function poolEntries(pool, factionId) {
+    if (pool.kind === 'tactic') {
+      // 戰法池只抽獨立戰法（STANDALONE_TACTICS，sourceHeroId 為 null），武將招牌
+      // 戰法只能靠擁有該武將取得，不會、也不該出現在任何抽獎池裡。
+      return D.STANDALONE_TACTICS
+        .filter((t) => t.rarity >= pool.tacticRarityRange[0] && t.rarity <= pool.tacticRarityRange[1])
+        .map((t) => ({ kind: 'tactic', id: t.id, weight: D.GACHA_RARITY_WEIGHT[t.rarity] || 1 }));
+    }
     const entries = [];
     D.HERO_DEFS.forEach((h) => {
       if (h.factionId !== factionId) return;
@@ -92,6 +99,15 @@
         } else {
           window.Game.Systems.Hero.unlockHeroFromMission(playerState, picked.id);
           results.push({ kind: 'hero', id: picked.id, duplicate: false });
+        }
+      } else if (picked.kind === 'tactic') {
+        const learned = window.Game.Systems.Hero.learnTactic(playerState, picked.id);
+        if (learned) {
+          results.push({ kind: 'tactic', id: picked.id, duplicate: false });
+        } else {
+          const refund = Math.round(perDrawCost * 0.3);
+          playerState.resources.ingot += refund;
+          results.push({ kind: 'tactic', id: picked.id, duplicate: true, refund });
         }
       } else {
         window.Game.Systems.Hero.grantItem(playerState, picked.id, 1);
