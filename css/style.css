@@ -378,6 +378,51 @@ button, .navBtn, select {
 .confirmCancelBtn { background: #3a3a3a; color: #ddd; }
 
 /* ---------------------------------------------------------------------- */
+/* 新手教學                                                                 */
+/* ---------------------------------------------------------------------- */
+#topHelpBtn {
+  flex: 0 0 auto;
+  background: rgba(255,255,255,0.08);
+  color: #e0b25a;
+  border: 1px solid rgba(224,178,90,0.4);
+  border-radius: 50%;
+  width: 26px; height: 26px;
+  font-size: 13px;
+  font-weight: bold;
+  line-height: 1;
+  padding: 0;
+}
+.tutorialOverlay { position: fixed; inset: 0; z-index: 400; pointer-events: auto; }
+.tutorialSpotlight {
+  position: fixed;
+  border-radius: 10px;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.72);
+  border: 2px solid #e0b25a;
+  transition: left 0.25s ease, top 0.25s ease, width 0.25s ease, height 0.25s ease;
+  pointer-events: none;
+}
+.tutorialSpotlight.tutorialSpotlightHidden { border: none; }
+.tutorialCard {
+  position: fixed;
+  left: 16px; right: 16px;
+  max-width: 380px;
+  margin: 0 auto;
+  background: #201810;
+  border: 1px solid #4a3620;
+  border-radius: 12px;
+  padding: 16px;
+  z-index: 401;
+}
+.tutorialCardCenter { top: 50%; transform: translateY(-50%); }
+.tutorialStepCount { font-size: 11px; color: #8a8070; margin-bottom: 4px; }
+.tutorialTitle { font-size: 16px; font-weight: bold; color: #e0b25a; margin-bottom: 8px; }
+.tutorialDesc { font-size: 13px; color: #eee6d3; line-height: 1.6; margin-bottom: 14px; }
+.tutorialBtnRow { display: flex; gap: 8px; align-items: center; }
+.tutorialSkipBtn { background: #3a3a3a; color: #ddd; flex: 0 0 auto; }
+.tutorialPrevBtn { background: rgba(255,255,255,0.08); color: #cfc4a8; flex: 0 0 auto; }
+.tutorialNextBtn { flex: 1 1 auto; margin-top: 0; }
+
+/* ---------------------------------------------------------------------- */
 /* 抽獎畫面                                                                 */
 /* ---------------------------------------------------------------------- */
 .gachaPoolPanel_bronze { border-color: rgba(122,122,122,0.4); }
