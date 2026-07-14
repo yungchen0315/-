@@ -209,7 +209,7 @@
   function resolveBattle(opts) {
     const { attackerUnits, attackerHeroStateId, attackerSubHeroStateIds, attackerEff, attackerPlayerState,
       defenderUnits, defenderHeroStateId, defenderSubHeroStateIds, defenderEff, defenderPlayerState,
-      defenderStaticGuard, wallBonusPct } = opts;
+      defenderStaticGuard, wallBonusPct, garrisonDefMul } = opts;
 
     // 一隊 = 主將在前、副將在後，全隊技能一起疊加、戰力一起計算（sideCombatStats）。
     const attackerHeroIds = [attackerHeroStateId].concat(attackerSubHeroStateIds || []).filter(Boolean);
@@ -219,7 +219,9 @@
     let defAtk = 0, defDef = 0, defHp = 0, defBonus = emptyCombatBonus(), defSuppressPct = 0;
     if (defenderUnits) {
       const dStats = sideCombatStats(defenderUnits, defenderHeroIds, defenderEff || {}, defenderPlayerState, false);
-      defAtk = dStats.atk; defDef = dStats.def; defHp = dStats.hp; defBonus = dStats.bonus; defSuppressPct = dStats.suppressPct;
+      // 城牆等級的 garrisonDefMul 只加成「駐守部隊」自身的防禦力，野外據點的固定守備力
+      // （defenderStaticGuard）不屬於任何城池的駐軍，不受城牆加成影響。
+      defAtk = dStats.atk; defDef = dStats.def * (garrisonDefMul || 1); defHp = dStats.hp; defBonus = dStats.bonus; defSuppressPct = dStats.suppressPct;
     }
     if (defenderStaticGuard) {
       defAtk += defenderStaticGuard * 0.6;
@@ -374,7 +376,7 @@
     const result = resolveBattle({
       attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerSubHeroStateIds: army.subHeroStateIds, attackerEff: eff, attackerPlayerState: playerState,
       defenderUnits: defUnits, defenderHeroStateId, defenderSubHeroStateIds, defenderEff: defEff, defenderPlayerState: defender,
-      wallBonusPct: defEff.defenseBonusPct + defEff.wallDefPct + terrainDefBonusPct(tile)
+      wallBonusPct: defEff.defenseBonusPct + defEff.wallDefPct + terrainDefBonusPct(tile), garrisonDefMul: defEff.garrisonDefMul
     });
     const win = result.winner === 'attacker';
     const resultText = win
@@ -439,7 +441,7 @@
     const result = resolveBattle({
       attackerUnits: army.units, attackerHeroStateId: army.heroStateId, attackerSubHeroStateIds: army.subHeroStateIds, attackerEff: eff, attackerPlayerState: playerState,
       defenderUnits: defUnits, defenderHeroStateId, defenderSubHeroStateIds, defenderEff: defEff, defenderPlayerState: defender,
-      wallBonusPct: defEff.defenseBonusPct + defEff.wallDefPct + terrainDefBonusPct(tile)
+      wallBonusPct: defEff.defenseBonusPct + defEff.wallDefPct + terrainDefBonusPct(tile), garrisonDefMul: defEff.garrisonDefMul
     });
     const win = result.winner === 'attacker';
     const resultText = win
