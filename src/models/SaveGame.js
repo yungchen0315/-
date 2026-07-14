@@ -18,6 +18,8 @@
    * @property {number} nextAiTickAt AI 勢力下一次決策排程的時間戳。
    * @property {string} activeScreenId 目前選中的畫面分頁 id（純 UI 狀態，但為了讓玩家
    *   下次開遊戲回到同一畫面，一併存進存檔）。
+   * @property {boolean} tutorialSeen 是否已經看過新手教學（見 src/ui/tutorialScreen.js）。
+   *   新遊戲建立時為 false，教學跑完或跳過後設為 true，避免每次開遊戲都重複彈出。
    * @property {{result:'victory'|'defeat', at:number, acknowledged:boolean}} [outcome]
    *   天下大勢的最終結局：玩家滅盡所有 AI 勢力＝victory（天下統一），玩家主城被攻陷＝
    *   defeat（敗亡）。由 gameLoopSystem.checkWorldOutcome 判定一次後寫入，bootstrap
@@ -54,7 +56,8 @@
       players,
       nextAiTickAt: now + 5 * 60000,
       activeScreenId: 'city',
-      activeBattles: {}
+      activeBattles: {},
+      tutorialSeen: false
     };
   }
 

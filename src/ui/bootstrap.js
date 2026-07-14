@@ -22,6 +22,7 @@
     }
     overlay.classList.add('activeOverlay');
 
+    U.onTap(document.getElementById('topHelpBtn'), () => { if (window.GameSave) window.Game.UI.Tutorial.start(); });
     U.onTap(document.getElementById('continueBtn'), () => { overlay.classList.remove('activeOverlay'); startWithSave(); });
     U.onTap(document.getElementById('newGameBtn'), async () => {
       if (saved) {
@@ -90,6 +91,8 @@
 
   // 舊存檔相容：補上後來才加入的欄位，讓載入舊進度時不會因為缺欄位而出錯。
   function normalizeSave(saveGame) {
+    // 舊存檔沒有新手教學欄位：一律視為已看過，避免老玩家讀檔時被硬塞教學畫面。
+    if (saveGame.tutorialSeen === undefined) saveGame.tutorialSeen = true;
     Object.values(saveGame.players || {}).forEach((p) => {
       Object.values(p.armies || {}).forEach((army) => {
         if (!Array.isArray(army.subHeroStateIds)) army.subHeroStateIds = [];
@@ -133,6 +136,12 @@
   function startFresh(factionId) {
     window.GameSave = window.Game.Systems.NewGame.createNewGame(factionId);
     afterReady();
+    if (!window.GameSave.tutorialSeen) {
+      window.Game.UI.Tutorial.start(() => {
+        window.GameSave.tutorialSeen = true;
+        window.Game.Systems.Save.saveToLocalStorage(window.GameSave);
+      });
+    }
   }
 
   function afterReady() {
