@@ -59,8 +59,25 @@
     t.guardPower = Math.max(1, Math.round((t.baseGuardPower || 1) * tileLevelGuardMul(lvl)));
   }
 
-  /** 開局約 15% 的資源格／土地格落在較高等級（2~3 級）：產量與守備力開局就比同類型格子高。 */
-  function rollInitialTileLevel() { return Math.random() < 0.15 ? U.randomInt(2, 3) : 1; }
+  /** 開局所有地形（資源格／土地格）落在哪個等級：等級 1 最常見，每往上一級
+   * 出現機率減半（權重 2^(MAX-lv)），形成「越高級越稀有」的自然分布，一路
+   * 覆蓋到最高等級 TILE_LEVEL_MAX——不必等玩家花資源升級，開局就可能直接
+   * 佔到極少數的高等級要地，但絕大多數仍是最基本的 1 級。 */
+  function rollInitialTileLevel() {
+    let weightSum = 0;
+    const weights = [];
+    for (let lv = 1; lv <= TILE_LEVEL_MAX; lv++) {
+      const w = Math.pow(2, TILE_LEVEL_MAX - lv);
+      weights.push(w);
+      weightSum += w;
+    }
+    let roll = Math.random() * weightSum;
+    for (let lv = 1; lv <= TILE_LEVEL_MAX; lv++) {
+      roll -= weights[lv - 1];
+      if (roll < 0) return lv;
+    }
+    return 1;
+  }
 
   function capitalSpotsFor(w, h) {
     const margin = Math.max(3, Math.round(w * 0.14));

@@ -48,7 +48,7 @@
     const tavernBuilt = Gacha.tavernLevel(playerState) > 0;
 
     const balancePanel = U.el('div', 'panel');
-    balancePanel.appendChild(U.el('div', 'panelTitle', '元寶餘額：🧧 ' + (playerState.resources.ingot || 0)));
+    balancePanel.appendChild(U.el('div', 'panelTitle', '元寶餘額：🧧 ' + Math.floor(playerState.resources.ingot || 0)));
     balancePanel.appendChild(U.el('div', 'subHint', '元寶透過戰役獎勵、成就、事件與每日簽到取得，可用來在酒館招募武將與裝備。'));
     if (!tavernBuilt) balancePanel.appendChild(U.el('div', 'subHint', '需先在城池分頁建造酒館，才能開始招募。'));
     container.appendChild(balancePanel);

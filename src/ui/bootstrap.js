@@ -83,7 +83,7 @@
       const gain = Math.round((player.resources[r] || 0) - (before[r] || 0));
       if (gain > 0) lines.push(D.RESOURCE_NAMES[r] + D.RESOURCE_ICONS[r] + ' +' + gain);
     });
-    const ingotGain = Math.round((player.resources.ingot || 0) - (before.ingot || 0));
+    const ingotGain = Math.floor(player.resources.ingot || 0) - Math.floor(before.ingot || 0);
     if (ingotGain > 0) lines.push('元寶🧧 +' + ingotGain);
     if (!lines.length) return;
     Dlg.showInfo('你離開了 ' + U.formatDurationWords(awayMs) + '，領地在此期間持續產出：', lines);
