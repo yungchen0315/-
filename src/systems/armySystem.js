@@ -96,6 +96,10 @@
     const home = getOrCreateHomeArmy(playerState);
     if (home.id !== army.id) {
       Object.keys(army.units).forEach((t) => { home.units[t] = (home.units[t] || 0) + army.units[t]; });
+      // 解散前先卸下全隊武將，否則武將的 assignedArmyId 會停留在已刪除的部隊 id，
+      // 之後永遠無法再被指派給任何部隊（heroScreen/armyScreen/aiSystem 都靠
+      // assignedArmyId 判斷武將是否「可指派」）。
+      window.Game.Systems.Hero.unassignHero(playerState, army);
       delete playerState.armies[army.id];
     }
     return true;
@@ -169,6 +173,11 @@
     const cost = {};
     Object.keys(unit.cost).forEach((r) => { cost[r] = unit.cost[r] * qty; });
     if (!U.canAfford(playerState.resources, cost)) return { ok: false, reason: '資源不足' };
+    // 訓練完成時只會依統率上限授予兵力（resolveTrainQueues），超出的部分作廢；
+    // 這裡先擋下顯然會超出上限的訓練，避免玩家白白花資源訓練出一批完成後被作廢的兵。
+    const eff = window.Game.Systems.Economy.computeEffects(playerState);
+    const room = Math.max(0, Math.floor((eff.popCap - leadershipUsedByFaction(playerState)) / unit.leadership));
+    if (room < qty) return { ok: false, reason: '統率上限不足，無法容納這批新兵' };
     return { ok: true, cost, unit };
   }
 
