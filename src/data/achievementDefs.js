@@ -28,7 +28,7 @@
   /** @type {AchievementDef[]} */
   const ACHIEVEMENT_DEFS = [
     { id: 'first_upgrade', name: '基業初立', desc: '完成一次建築升級',
-      reward: { resources: { gold: 100 }, ingot: 20 }, condition: { type: 'buildingLevelAny', atLeast: 2 } },
+      reward: { resources: { gold: 100 }, ingot: 20 }, condition: { type: 'buildingLevelAny', atLeast: 1 } },
     { id: 'capital5', name: '固若金湯', desc: '主城升級至 5 級',
       reward: { resources: { gold: 400, stone: 300 }, ingot: 60 }, condition: { type: 'buildingLevel', building: 'capital', atLeast: 5 } },
     { id: 'capital10', name: '王城巍峨', desc: '主城升級至 10 級',

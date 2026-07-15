@@ -319,8 +319,8 @@ button, .navBtn, select {
 }
 #setupOverlay.activeOverlay { display: flex; }
 #setupBox { text-align: center; padding: 20px; }
-#setupTitle { font-size: 30px; font-weight: bold; color: #e0b25a; letter-spacing: 4px; margin-bottom: 6px; }
-#setupSubtitle { font-size: 13px; color: #bcae8f; margin-bottom: 30px; }
+#setupTitle, #setupTitleFaction { font-size: 30px; font-weight: bold; color: #e0b25a; letter-spacing: 4px; margin-bottom: 6px; }
+#setupSubtitle, #setupSubtitleFaction { font-size: 13px; color: #bcae8f; margin-bottom: 30px; }
 .legacyNotice { font-size: 12px; color: #e0b25a; max-width: 220px; margin: -18px auto 20px; line-height: 1.6; }
 .setupBtn {
   display: block;

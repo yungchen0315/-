@@ -196,7 +196,7 @@
       reward: { resources: { gold: 450 }, unlockHeroId: null, ingot: 70 }, requires: ['wu_m13'] },
     { id: 'wu_m15', chapter: 7, epic: true, name: '江東一統', flavor: '三分歸一的最終決戰，誰主天下就在此役。',
       enemy: { heroId: null, name: '三國聯軍', units: { infantry: 100, cavalry: 50, crossbowman: 30, siege: 20 } },
-      reward: { resources: { food: 800, wood: 800, stone: 800, gold: 800 }, unlockHeroId: null, itemReward: 'horse_red_hare', ingot: 300 }, requires: ['wu_m13', 'wu_m14'] }
+      reward: { resources: { food: 800, wood: 800, stone: 800, gold: 800 }, unlockHeroId: null, itemReward: 'horse_red_hare', ingot: 300 }, requires: ['wu_m12', 'wu_m14'] }
   ];
 
   /** @type {Object<string,MissionDef[]>} */
