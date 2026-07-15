@@ -107,8 +107,15 @@
       // 的畫面在讀到孤兒資料時炸掉，直接清掉（連同尚未完工的升級一起作廢）。
       const capitalTile = window.Game.Systems.Map.capitalTileOf(saveGame.map, p.factionId);
       Object.values(p.cities || {}).forEach((city) => {
-        Object.keys(city.buildings || {}).forEach((type) => {
+        if (!city.buildings) city.buildings = {};
+        Object.keys(city.buildings).forEach((type) => {
           if (!window.Game.Data.buildingDefById(type)) delete city.buildings[type];
+        });
+        // 反向補齊：存檔建立當下 BUILDING_ORDER 裡還沒有、之後才新增的建築型別
+        // （例如工坊／學院／酒館），舊存檔的城池不會有這個 key，讀取時
+        // city.buildings[type] 會是 undefined，讓城池畫面／AI 練兵直接拋例外。
+        window.Game.Data.BUILDING_ORDER.forEach((type) => {
+          if (!city.buildings[type]) city.buildings[type] = window.Game.Models.createBuildingState(type, 0);
         });
         // 舊存檔沒有 isCapital 欄位：用地圖上該勢力實際的主城座標比對回填，
         // 不能單純假設字典裡第一筆就是主城（armySystem.primaryCity 依 isCapital
