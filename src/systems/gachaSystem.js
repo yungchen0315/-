@@ -28,6 +28,9 @@
       playerState.lastDailyRewardAt += DAILY_REWARD_INTERVAL_MS;
       days++;
     }
+    // 補發次數達上限後，把追蹤時間點直接跳到現在，避免每次 gameTick 都重新補發
+    // DAILY_REWARD_MAX_CATCHUP 天份，讓「最多補 7 天」的上限形同虛設。
+    if (now - playerState.lastDailyRewardAt >= DAILY_REWARD_INTERVAL_MS) playerState.lastDailyRewardAt = now;
     if (days > 0) playerState.resources.ingot = (playerState.resources.ingot || 0) + DAILY_REWARD_INGOT * days;
     return days;
   }

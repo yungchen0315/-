@@ -158,7 +158,7 @@
           '<br><span class="invItemEff">' + D.describeItemEffect(item) + '</span>'));
         const select = document.createElement('select');
         select.className = 'armySelect';
-        heroList.forEach((h) => {
+        heroList.filter((h) => D.heroDefById(h.heroDataId)).forEach((h) => {
           const opt = document.createElement('option');
           opt.value = h.heroDataId;
           opt.textContent = D.heroDefById(h.heroDataId).name;

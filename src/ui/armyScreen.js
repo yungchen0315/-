@@ -68,7 +68,9 @@
     if (garrisonArmies.length === 0) armyPanel.appendChild(U.el('div', 'emptyHint', '目前沒有駐守部隊。'));
     garrisonArmies.forEach((army, idx) => { armyPanel.appendChild(buildArmyCard(container, saveGame, playerState, army, idx === 0)); });
 
-    if (garrisonArmies.length > 0 && Army.unitCount(garrisonArmies[0]) >= 2) {
+    // 拆分邏輯（formNewArmyFromHalf）是各兵種各自取半，所以按鈕要不要出現得看「是否有任一兵種數量 ≥ 2」，
+    // 而不是全軍總兵力 ≥ 2——否則兩種各 1 兵的情況會出現按鈕但點下去必定失敗。
+    if (garrisonArmies.length > 0 && Object.values(garrisonArmies[0].units).some((n) => (n || 0) >= 2)) {
       const splitBtn = U.el('button', 'smallBtn', '拆分部隊（各兵種各半組成新軍）');
       U.onTap(splitBtn, () => {
         const r = Army.formNewArmyFromHalf(playerState);

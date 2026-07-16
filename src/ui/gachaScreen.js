@@ -53,6 +53,11 @@
     if (!tavernBuilt) balancePanel.appendChild(U.el('div', 'subHint', '需先在城池分頁建造酒館，才能開始招募。'));
     container.appendChild(balancePanel);
 
+    // 招募實際扣費（Gacha.draw）會套用 gachaDiscountPct 折扣，按鈕標示的價格也要用同一套
+    // 折扣計算，否則玩家點下去實際扣的元寶會比按鈕上顯示的少。
+    const eff = window.Game.Systems.Economy.computeEffects(playerState);
+    const discountedCost = (base) => Math.round(base * (1 - (eff.gachaDiscountPct || 0) / 100));
+
     D.GACHA_POOLS.forEach((pool) => {
       const panel = U.el('div', 'panel gachaPoolPanel gachaPoolPanel_' + pool.id);
       panel.appendChild(U.el('div', 'panelTitle', pool.name));
@@ -65,8 +70,8 @@
       }
 
       const row = U.el('div', 'gachaDrawRow');
-      const singleBtn = U.el('button', 'smallBtn' + (tavernBuilt ? '' : ' disabled'), '單抽 🧧' + pool.costSingle);
-      const tenBtn = U.el('button', 'smallBtn' + (tavernBuilt ? '' : ' disabled'), '十連 🧧' + pool.costTen);
+      const singleBtn = U.el('button', 'smallBtn' + (tavernBuilt ? '' : ' disabled'), '單抽 🧧' + discountedCost(pool.costSingle));
+      const tenBtn = U.el('button', 'smallBtn' + (tavernBuilt ? '' : ' disabled'), '十連 🧧' + discountedCost(pool.costTen));
       row.appendChild(singleBtn);
       row.appendChild(tenBtn);
       panel.appendChild(row);

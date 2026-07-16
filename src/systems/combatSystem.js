@@ -126,7 +126,9 @@
       hp += qty * d.stats.hp;
     });
     const statBonus = squadStatBonus(playerState, heroIds);
-    atk *= (1 + statBonus.forcePct / 100) * (1 + (bonus.atkPct + bonus.firstStrikePct) / 100);
+    // firstStrikePct 只在戰鬥第一回合生效，不摺算進這裡的 atk（否則會變成全程生效的 atkPct）；
+    // 交給 resolveBattle 在逐回合迴圈中只對第一回合套用。
+    atk *= (1 + statBonus.forcePct / 100) * (1 + bonus.atkPct / 100);
     def *= 1 + bonus.defPct / 100;
     hp *= 1 + bonus.hpPct / 100;
     return { atk, def, hp, bonus, suppressPct: statBonus.suppressPct };
@@ -242,6 +244,9 @@
     defDef *= 1 + (wallBonusPct || 0) / 100;
     defDef *= 1 + (atkStats.bonus.enemyDefPct || 0) / 100;
     const attackerAtkFinal = atkStats.atk * (1 + (defBonus.enemyAtkPct || 0) / 100) * atkCounterMul * (1 - defSuppressPct / 100);
+    // 首輪傷害提升（firstStrikePct）只加成第一回合的攻擊，不是全程 buff。
+    const attackerAtkFirstTurn = attackerAtkFinal * (1 + (atkStats.bonus.firstStrikePct || 0) / 100);
+    const defAtkFirstTurn = defAtk * (1 + (defBonus.firstStrikePct || 0) / 100);
     const attackerLossReductionPct = U.clamp(atkStats.bonus.lossReductionPct, 0, 60);
     const defenderLossReductionPct = U.clamp(defBonus.lossReductionPct, 0, 60);
 
@@ -265,7 +270,8 @@
     let winner = null;
     while (turn < MAX_TURNS) {
       turn++;
-      const dmgToDefenderRaw = (attackerAtkFinal * TURN_DMG_SCALE) / (1 + defDef / TURN_DEF_SOFTEN);
+      const atkPowerThisTurn = turn === 1 ? attackerAtkFirstTurn : attackerAtkFinal;
+      const dmgToDefenderRaw = (atkPowerThisTurn * TURN_DMG_SCALE) / (1 + defDef / TURN_DEF_SOFTEN);
       const dmgToDefender = dmgToDefenderRaw * (1 - defenderLossReductionPct / 100);
       defHpPool = Math.max(0, defHpPool - dmgToDefender);
       timeline.push({
@@ -274,7 +280,8 @@
       });
       if (defHpPool <= 0) { winner = 'attacker'; break; }
 
-      const dmgToAttackerRaw = (defAtk * TURN_DMG_SCALE) / (1 + atkStats.def / TURN_DEF_SOFTEN);
+      const defPowerThisTurn = turn === 1 ? defAtkFirstTurn : defAtk;
+      const dmgToAttackerRaw = (defPowerThisTurn * TURN_DMG_SCALE) / (1 + atkStats.def / TURN_DEF_SOFTEN);
       const dmgToAttacker = dmgToAttackerRaw * (1 - attackerLossReductionPct / 100);
       atkHp = Math.max(0, atkHp - dmgToAttacker);
       timeline.push({

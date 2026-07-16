@@ -44,6 +44,10 @@
    * @property {string[]} unlockedAchievementIds
    * @property {number} nextEventAt 下一次隨機事件的排程時間戳，供事件系統使用。
    * @property {number} lastDailyRewardAt 上次發放每日簽到元寶的時間戳，供 gachaSystem 使用。
+   * @property {Object<string,number>} idleUnits 訓練完成時統率上限已滿、暫時無法編入
+   *   主力部隊的閒置兵力，以 UnitDef.id 為 key。不算在 leadershipUsedByFaction 裡，
+   *   不能出征也不能參與城池防禦，等統率上限空出額度時由 armySystem.promoteIdleUnits
+   *   自動補進主力部隊。
    */
 
   /**
@@ -83,7 +87,8 @@
       pendingEvents: [],
       unlockedAchievementIds: [],
       nextEventAt: now + 8 * 60000,
-      lastDailyRewardAt: now
+      lastDailyRewardAt: now,
+      idleUnits: {}
     };
   }
 

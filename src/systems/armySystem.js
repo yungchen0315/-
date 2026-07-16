@@ -96,6 +96,10 @@
     const home = getOrCreateHomeArmy(playerState);
     if (home.id !== army.id) {
       Object.keys(army.units).forEach((t) => { home.units[t] = (home.units[t] || 0) + army.units[t]; });
+      // 解散前先卸下全隊武將，否則武將的 assignedArmyId 會停留在已刪除的部隊 id，
+      // 之後永遠無法再被指派給任何部隊（heroScreen/armyScreen/aiSystem 都靠
+      // assignedArmyId 判斷武將是否「可指派」）。
+      window.Game.Systems.Hero.unassignHero(playerState, army);
       delete playerState.armies[army.id];
     }
     return true;
@@ -186,7 +190,10 @@
     return { ok: true };
   }
 
-  /** 訓練完成時依統率上限（而非直接無條件發放）授予兵力，超出上限的部分作廢並退還無法退還的兵力提示由 UI 處理。 */
+  /** 訓練完成時，只有統率上限容得下的部分直接編入主力部隊（可出征／可駐守防禦）；
+   *  超出上限的部分不會作廢，而是存進 playerState.idleUnits 閒置兵力庫，等統率上限
+   *  之後空出額度（損兵、解散部隊、建築升級提升上限……）時由 promoteIdleUnits 自動
+   *  補進主力部隊，兵力永遠不會被默默浪費，只是暫時閒置、不能出征也不能參與防禦。 */
   function resolveTrainQueues(playerState, city, now) {
     ['barracks', 'drillground', 'workshop'].forEach((bt) => {
       const b = city.buildings[bt];
@@ -198,9 +205,31 @@
         const leadershipPerUnit = D.unitDefById(item.unitDefId).leadership;
         const room = Math.max(0, Math.floor((cap - used) / leadershipPerUnit));
         const grant = Math.min(item.qty, room);
+        const idle = item.qty - grant;
         const home = getOrCreateHomeArmy(playerState);
         home.units[item.unitDefId] = (home.units[item.unitDefId] || 0) + grant;
+        if (idle > 0) playerState.idleUnits[item.unitDefId] = (playerState.idleUnits[item.unitDefId] || 0) + idle;
       }
+    });
+  }
+
+  /** 統率上限空出額度時，把閒置兵力庫（idleUnits）裡的兵盡量補進主力部隊。
+   *  每種兵種依統率消耗排隊搶剩餘額度，額度不夠一種兵種的整批時只補進度得下的數量，
+   *  其餘繼續留在閒置庫等下一次額度釋出。 */
+  function promoteIdleUnits(playerState) {
+    const idle = playerState.idleUnits || {};
+    const idleTypes = Object.keys(idle).filter((t) => idle[t] > 0);
+    if (idleTypes.length === 0) return;
+    const home = getOrCreateHomeArmy(playerState);
+    idleTypes.forEach((type) => {
+      const eff = window.Game.Systems.Economy.computeEffects(playerState);
+      const room = Math.max(0, Math.floor((eff.popCap - leadershipUsedByFaction(playerState)) / D.unitDefById(type).leadership));
+      if (room <= 0) return;
+      const move = Math.min(idle[type], room);
+      if (move <= 0) return;
+      home.units[type] = (home.units[type] || 0) + move;
+      idle[type] -= move;
+      if (idle[type] <= 0) delete idle[type];
     });
   }
 
@@ -209,6 +238,6 @@
     unitCount, leadershipUsed, leadershipUsedByFaction, slowestSpeed, marchDurationMs, armySpeedBonus,
     primaryCity, getOrCreateHomeArmy, createArmyFromGarrison, formNewArmyFromHalf, disbandArmyIntoHome,
     sendArmyToTile, startReturn, resolveArmies,
-    trainableUnitIds, canQueueTraining, queueTraining, resolveTrainQueues
+    trainableUnitIds, canQueueTraining, queueTraining, resolveTrainQueues, promoteIdleUnits
   };
 })();

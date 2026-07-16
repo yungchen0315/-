@@ -88,7 +88,7 @@
     const city = window.Game.Systems.Army.primaryCity(playerState);
     if (!city) return;
     const Army = window.Game.Systems.Army;
-    ['barracks', 'drillground'].forEach((bt) => {
+    ['barracks', 'drillground', 'workshop'].forEach((bt) => {
       if (city.buildings[bt].level <= 0) return;
       if (city.buildings[bt].trainQueue.length > 0) return;
       const units = Army.trainableUnitIds(bt).filter((u) => Army.canQueueTraining(playerState, city, bt, u, 5).ok);
