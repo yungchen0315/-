@@ -37,6 +37,9 @@
     });
     window.Game.Systems.Technology.resolveResearch(playerState, now);
     window.Game.Systems.Army.resolveArmies(saveGame, playerState, now);
+    // 統率上限可能因為建築升級提高、或上一輪戰鬥／解散部隊減少佔用而空出額度，
+    // 每個 tick 都嘗試把閒置兵力庫（idleUnits）補回主力部隊。
+    window.Game.Systems.Army.promoteIdleUnits(playerState);
     window.Game.Systems.Event.tick(playerState, now);
     window.Game.Systems.Mission.refreshMissionStatuses(playerState);
     window.Game.Systems.Achievement.checkAchievements(playerState);

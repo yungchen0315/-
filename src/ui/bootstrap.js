@@ -101,6 +101,7 @@
         if (!Array.isArray(hero.tactics)) hero.tactics = [];
       });
       if (!Array.isArray(p.learnedTactics)) p.learnedTactics = [];
+      if (!p.idleUnits) p.idleUnits = {};
       if (!p.defeated) window.Game.Systems.NewGame.grantStarterHeroIfMissing(p);
       // 舊存檔可能還留著已刪除建築（糧倉／伐木場／採石場／金礦）的資料，
       // 這些型別在 D.BUILDING_DEFS 已經不存在，留著只會讓依賴 buildingDefById

@@ -61,6 +61,11 @@
 
     const popUsed = window.Game.Systems.Army.leadershipUsedByFaction(playerState);
     summary.appendChild(U.el('div', 'popRow', '統率上限：' + popUsed + ' / ' + eff.popCap));
+    const idleTypes = Object.keys(playerState.idleUnits || {}).filter((t) => playerState.idleUnits[t] > 0);
+    if (idleTypes.length > 0) {
+      const idleText = idleTypes.map((t) => D.unitDefById(t).name + ' x' + playerState.idleUnits[t]).join('　');
+      summary.appendChild(U.el('div', 'subHint', '統率上限已滿，以下新兵閒置中（不可出征／不可駐守防禦），上限空出額度後會自動編入部隊：' + idleText));
+    }
     container.appendChild(summary);
 
     renderEventsPanel(container, playerState);
