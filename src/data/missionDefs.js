@@ -41,11 +41,12 @@
    * @property {string[]} requires 前置關卡 id 列表。
    */
 
-  /** @type {MissionDef[]} 蜀漢戰役——m1 起改為解鎖劉備（原起始武將趙雲改為酒館招募取得）。 */
+  /** @type {MissionDef[]} 蜀漢戰役——劉備已是開局起始武將（原起始武將趙雲改為酒館招募取得），
+   *  m1 不再重複解鎖劉備。 */
   const SHU_MISSIONS = [
     { id: 'shu_m1', chapter: 1, name: '桃園再會', flavor: '長坂坡外，趙雲單騎救主，殺出重圍，劉備自此決心成就大業。',
       enemy: { heroId: null, name: '曹軍游騎', units: { infantry: 20, cavalry: 10 } },
-      reward: { resources: { food: 300, wood: 200 }, unlockHeroId: 'liubei', ingot: 30 }, requires: [] },
+      reward: { resources: { food: 300, wood: 200 }, unlockHeroId: null, ingot: 30 }, requires: [] },
     { id: 'shu_m2', chapter: 1, name: '古城會', flavor: '張飛據守古城，疑心關羽變節，需以武力說明忠義。',
       enemy: { heroId: null, name: '蔡陽部', units: { infantry: 25, spearman: 10 } },
       reward: { resources: { wood: 300, stone: 150 }, unlockHeroId: 'zhangfei', ingot: 30 }, requires: ['shu_m1'] },
@@ -98,7 +99,7 @@
   const WEI_MISSIONS = [
     { id: 'wei_m1', chapter: 1, name: '陳留起兵', flavor: '曹操散盡家財，於陳留起兵討伐董卓，正式踏上爭雄之路。',
       enemy: { heroId: null, name: '董卓遊騎', units: { infantry: 20, cavalry: 10 } },
-      reward: { resources: { food: 300, wood: 200 }, unlockHeroId: 'caocao', ingot: 30 }, requires: [] },
+      reward: { resources: { food: 300, wood: 200 }, unlockHeroId: null, ingot: 30 }, requires: [] },
     { id: 'wei_m2', chapter: 1, name: '濮陽救主', flavor: '呂布奇襲濮陽，典韋捨命斷後，殺退追兵救回曹操。',
       enemy: { heroId: null, name: '呂布奇兵', units: { infantry: 25, spearman: 10 } },
       reward: { resources: { wood: 300, stone: 150 }, unlockHeroId: 'dianwei', ingot: 30 }, requires: ['wei_m1'] },
@@ -151,7 +152,7 @@
   const WU_MISSIONS = [
     { id: 'wu_m1', chapter: 1, name: '江東基業', flavor: '孫權承父兄之業，穩守江東，靜待天時。',
       enemy: { heroId: null, name: '山越叛軍', units: { infantry: 20, cavalry: 10 } },
-      reward: { resources: { food: 300, wood: 200 }, unlockHeroId: 'sunquan', ingot: 30 }, requires: [] },
+      reward: { resources: { food: 300, wood: 200 }, unlockHeroId: null, ingot: 30 }, requires: [] },
     { id: 'wu_m2', chapter: 1, name: '神亭鬥將', flavor: '孫策與太史慈神亭嶺上一場惡鬥，終為其膽識折服，收歸帳下。',
       enemy: { heroId: null, name: '劉繇部曲', units: { infantry: 25, spearman: 10 } },
       reward: { resources: { wood: 300, stone: 150 }, unlockHeroId: 'taishici', ingot: 30 }, requires: ['wu_m1'] },
