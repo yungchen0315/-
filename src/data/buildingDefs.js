@@ -56,7 +56,11 @@
         level: lv,
         cost: { wood: scale(200, 1.55, lv, 10), stone: scale(200, 1.55, lv, 10), gold: scale(100, 1.6, lv, 10) },
         timeMs: scale(5 * 60000, 1.4, lv),
-        effect: { maxOtherBuildingLevel: lv, popCap: scale(20, 1.25, lv, 1), cityYieldPerHour: scale(30, 1.3, lv, 5) }
+        // 其他建築的等級上限直接看 city.buildings.capital.level（cityBuildingSystem.
+        // capitalCapLevel），不是靠這裡的 effect 欄位算出來，所以這裡不重複放一份
+        // maxOtherBuildingLevel（放了也不會有任何系統讀取，兩份數字還可能日後被
+        // 改到不一致）。
+        effect: { popCap: scale(20, 1.25, lv, 1), cityYieldPerHour: scale(30, 1.3, lv, 5) }
       }))
     },
     warehouse: {

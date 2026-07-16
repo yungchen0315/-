@@ -31,6 +31,7 @@
         Object.keys(mission.enemy.units).map((u) => D.unitDefById(u).icon + mission.enemy.units[u]).join(' ')));
       card.appendChild(U.el('div', 'campaignReward', '獎勵：' +
         Object.keys(mission.reward.resources).map((r) => D.RESOURCE_ICONS[r] + mission.reward.resources[r]).join(' ') +
+        (mission.reward.ingot ? '　🧧' + mission.reward.ingot : '') +
         (mission.reward.unlockHeroId ? '　武將：' + D.heroDefById(mission.reward.unlockHeroId).name : '') +
         (mission.reward.itemReward ? '　裝備：' + D.itemDefById(mission.reward.itemReward).name : '')));
 
