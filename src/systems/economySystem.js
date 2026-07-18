@@ -8,6 +8,11 @@
   const U = window.Game.Utils;
   const D = window.Game.Data;
 
+  // 兵力上限（popCap）只看目前佔領的城池數，不看建築等級：擁有主城（第 1 座）拿
+  // 基礎額度，之後每多佔領一座城池（含攻下的敵方城池）都再加一份。
+  const TERRITORY_POP_BASE = 20;
+  const TERRITORY_POP_PER_CITY = 15;
+
   /**
    * 彙總一個 PlayerState 目前所有城池建築＋已完成科技帶來的效果。
    * 這是其他系統（練兵速度、統率上限、城防加成……）共用的唯一入口，
@@ -22,7 +27,7 @@
       // tick() 逐城結算時套用；地圖產地／土地格的產出不受這些科技影響。
       cityYieldMul: { food: 1, wood: 1, stone: 1, gold: 1 },
       storageCap: { food: 1000, wood: 1000, stone: 1000, gold: 800 },
-      popCap: 20,
+      popCap: 0,
       trainSpeedMul: { barracks: 1, drillground: 1, workshop: 1 },
       researchSpeedMul: 1,
       gachaDiscountPct: 0,
@@ -45,7 +50,6 @@
         const ld = D.buildingLevelDef(type, b.level);
         const e = ld.effect;
         if (e.storageCapAll) { D.RESOURCE_TYPES.forEach((r) => { eff.storageCap[r] += e.storageCapAll; }); }
-        if (e.popCap) eff.popCap = Math.max(eff.popCap, e.popCap);
         if (e.trainSpeedMul && (type === 'barracks' || type === 'drillground' || type === 'workshop')) eff.trainSpeedMul[type] = e.trainSpeedMul;
         if (e.researchSpeedMul) eff.researchSpeedMul = e.researchSpeedMul;
         if (e.gachaDiscountPct) eff.gachaDiscountPct = Math.max(eff.gachaDiscountPct, e.gachaDiscountPct);
@@ -56,6 +60,12 @@
       });
       eff.dailyIngotYield += cityDailyIngotYield(city);
     });
+    // 兵力上限不再跟城池等級掛鉤，改成只看目前佔領了幾座城池（含主城）：每多佔領
+    // 一座城池就多一份額度，讓玩家擴張領土時自然而然帶得動更多部隊。地圖上全部
+    // 三方勢力合計 18 座城池（各自主城＋5 座据點城，見 mapSystem.js
+    // HOME_CITY_OFFSETS），照這個級距推算，真的統一天下、佔領整張地圖時兵力
+    // 上限會有 20 + 17×15 = 275，足夠帶動大軍不會被統一天下的規模卡住。
+    eff.popCap = TERRITORY_POP_BASE + TERRITORY_POP_PER_CITY * Math.max(0, Object.keys(playerState.cities).length - 1);
 
     Object.keys(playerState.technologies).forEach((techId) => {
       const techState = playerState.technologies[techId];

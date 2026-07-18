@@ -549,16 +549,25 @@
     garrisonArmies.forEach((army) => {
       const row = U.el('div', 'exploreTargetRow');
       row.appendChild(U.el('span', '', army.name + '（' + window.Game.Systems.Army.unitCount(army) + ' 兵）'));
-      const btn = U.el('button', 'smallBtn', purpose === 'attack' ? '出征' : '派遣');
-      U.onTap(btn, () => {
-        const r = window.Game.Systems.Army.sendArmyToTile(saveGame, playerState, army.id, { x: tile.x, y: tile.y }, purpose, U.now());
-        if (r.ok) {
-          Dlg.toast(army.name + ' 已出發，預計 ' + U.formatDurationWords(r.etaMs) + ' 後抵達');
-          window.Game.UI.Bootstrap.refreshArmyScreenIfActive();
-          renderInfoPanel(saveGame, playerState);
-        } else Dlg.toast(r.reason);
-      });
-      row.appendChild(btn);
+      // sendArmyToTile 一定會擋下沒有主將、或兵力超出主將統率上限的部隊；這裡先在按鈕
+      // 出現前就檢查同一組條件並改顯示原因，避免玩家看到按鈕、點下去卻必定失敗。
+      const Hero = window.Game.Systems.Hero;
+      if (!army.heroStateId) {
+        row.appendChild(U.el('span', 'lockedHint', '尚未指派主將，無法出征'));
+      } else if (window.Game.Systems.Army.leadershipUsed(army) > Hero.armyLeadershipCap(playerState, army)) {
+        row.appendChild(U.el('span', 'lockedHint', '兵力超出主將統率上限，無法出征'));
+      } else {
+        const btn = U.el('button', 'smallBtn', purpose === 'attack' ? '出征' : '派遣');
+        U.onTap(btn, () => {
+          const r = window.Game.Systems.Army.sendArmyToTile(saveGame, playerState, army.id, { x: tile.x, y: tile.y }, purpose, U.now());
+          if (r.ok) {
+            Dlg.toast(army.name + ' 已出發，預計 ' + U.formatDurationWords(r.etaMs) + ' 後抵達');
+            window.Game.UI.Bootstrap.refreshArmyScreenIfActive();
+            renderInfoPanel(saveGame, playerState);
+          } else Dlg.toast(r.reason);
+        });
+        row.appendChild(btn);
+      }
       panel.appendChild(row);
     });
   }
