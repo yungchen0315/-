@@ -1,0 +1,227 @@
+/* ============================================================================
+ * style.css — 《潛燈》DEEPLIGHT 全域樣式。色盤對應 src/data/palette.js。
+ * ==========================================================================*/
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: #050810;
+  color: #D6E5F3;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", sans-serif;
+  overflow: hidden;
+}
+
+body { display: flex; flex-direction: column; height: 100dvh; }
+
+.pixelIcon { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+
+/* ---------------------------------------------------------------------- */
+/* 頂欄                                                                     */
+/* ---------------------------------------------------------------------- */
+#topBar {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 10px 8px calc(8px + env(safe-area-inset-top));
+  background: #101823;
+  border-bottom: 2px solid #33455C;
+  font-size: 14px;
+}
+.topItem { display: flex; align-items: baseline; gap: 4px; }
+.topLabel { color: #7E92A8; font-size: 12px; }
+.topSub { color: #45E8BC; font-size: 11px; }
+
+/* ---------------------------------------------------------------------- */
+/* 分頁容器                                                                 */
+/* ---------------------------------------------------------------------- */
+#screens { flex: 1 1 auto; position: relative; overflow: hidden; }
+.screen { position: absolute; inset: 0; display: none; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.screen.activeScreen { display: block; }
+
+/* ---------------------------------------------------------------------- */
+/* 潛航畫面                                                                 */
+/* ---------------------------------------------------------------------- */
+.diveScene {
+  position: relative;
+  width: 100%; height: 100%;
+  background: #1B4965;
+  overflow: hidden;
+  transition: background 0.6s ease;
+}
+
+.oceanSnow {
+  position: absolute; top: -6px; width: 2px; height: 2px; background: #9ADCF0;
+  opacity: 0.5;
+  animation-name: snowFall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes snowFall { from { transform: translateY(-10px); opacity: 0.6; } to { transform: translateY(70vh); opacity: 0; } }
+
+.haloWrap { position: absolute; left: 50%; top: 52%; width: 0; height: 0; }
+.haloRing {
+  position: absolute; left: 0; top: 0;
+  border: 2px solid #45E8BC;
+  opacity: 0.18;
+}
+.haloRing1 { opacity: 0.12; }
+.haloRing2 { opacity: 0.07; }
+
+.hullWrap {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  animation: hullBob 2.4s ease-in-out infinite;
+  z-index: 3;
+}
+@keyframes hullBob { 0%, 100% { transform: translate(-50%, -50%) translateY(0); } 50% { transform: translate(-50%, -50%) translateY(4px); } }
+
+.creatureSprite {
+  position: absolute;
+  z-index: 4;
+  cursor: pointer;
+  filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));
+}
+.creatureSprite.creatureRare { filter: drop-shadow(0 0 6px #B784FF); }
+
+.tapParticle {
+  position: absolute;
+  color: #B8FFE9;
+  font-size: 13px;
+  font-weight: bold;
+  pointer-events: none;
+  animation: tapFloat 0.9s ease-out forwards;
+  z-index: 5;
+}
+@keyframes tapFloat { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-30px); opacity: 0; } }
+
+.pendingBadge {
+  position: absolute; top: 12px; right: 12px;
+  background: #1B2836; border: 2px solid #33455C;
+  padding: 4px 8px; font-size: 13px; color: #FFB454;
+  z-index: 6; display: none;
+}
+
+.gateBtn {
+  display: none;
+  position: absolute; left: 50%; bottom: 18%;
+  transform: translateX(-50%);
+  background: #1B2836; color: #7E92A8;
+  border: 2px solid #33455C;
+  padding: 10px 16px; font-size: 14px;
+  z-index: 6;
+}
+.gateBtn.gateBtnReady { color: #F2C14E; border-color: #F2C14E; }
+
+.depthLabel {
+  position: absolute; left: 10px; bottom: 10px;
+  font-size: 12px; color: #D6E5F3;
+  background: rgba(16,24,35,0.6);
+  padding: 3px 6px;
+  z-index: 6;
+}
+
+/* ---------------------------------------------------------------------- */
+/* 通用面板（模組／研究／海面分頁共用）                                       */
+/* ---------------------------------------------------------------------- */
+.panel { background: #101823; border: 1px solid #33455C; margin: 10px; padding: 10px; }
+.panelTitle { font-size: 15px; font-weight: bold; color: #FFB454; margin-bottom: 8px; }
+.subHint { font-size: 12px; color: #7E92A8; margin-top: 4px; }
+.lockedHint { font-size: 12px; color: #FF5C69; margin-top: 6px; }
+.maxedHint { font-size: 12px; color: #7E92A8; }
+
+button { font-family: inherit; border: none; cursor: pointer; }
+
+.smallBtn {
+  background: #1B2836; color: #45E8BC; border: 1px solid #33455C !important;
+  padding: 6px 10px; font-size: 13px; white-space: nowrap;
+}
+.smallBtn.disabled { color: #7E92A8; }
+.dangerBtn { color: #FF5C69; }
+
+.ballastRow { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+
+.moduleRow { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #1B2836; }
+.moduleInfo { flex: 1; }
+.moduleName { font-size: 13px; }
+.moduleSub { font-size: 11px; color: #7E92A8; }
+.moduleUpgradeRow { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #B784FF; padding: 2px 0 6px 32px; }
+.moduleUpgradeHint { font-size: 11px; color: #7E92A8; padding: 0 0 6px 32px; }
+.moduleLockedHint { font-size: 12px; color: #7E92A8; padding: 6px 0; }
+
+.researchRow, .refitRow, .achRow { padding: 6px 0; border-bottom: 1px solid #1B2836; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.researchRow.researchDone, .refitRow.refitOwned, .achRow.achDone { opacity: 0.55; }
+.researchName, .refitName { font-size: 13px; flex: 0 0 auto; margin-right: 6px; }
+.researchDesc, .refitDesc, .achDesc { font-size: 11px; color: #7E92A8; flex: 1 1 auto; }
+
+.bestiaryGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 6px; }
+.bestiaryCell { background: #1B2836; border: 1px solid #33455C; padding: 6px; text-align: center; }
+.bestiaryCell.bestiaryUnknown { opacity: 0.4; }
+.bestiaryUnknownMark { font-size: 24px; color: #33455C; padding: 12px 0; }
+.bestiaryName { font-size: 10px; margin-top: 2px; }
+.bestiarySeen { font-size: 9px; color: #7E92A8; }
+
+.prestigeBtn {
+  width: 100%; padding: 12px; margin-top: 8px;
+  background: #1B2836; color: #B784FF; border: 2px solid #B784FF !important; font-size: 15px;
+}
+.prestigeBtn.disabled { color: #7E92A8; border-color: #33455C !important; }
+
+/* ---------------------------------------------------------------------- */
+/* 底部導覽                                                                 */
+/* ---------------------------------------------------------------------- */
+#bottomNav {
+  flex: 0 0 auto;
+  display: flex;
+  background: #0A1220;
+  border-top: 2px solid #33455C;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.navBtn {
+  flex: 1 1 0;
+  background: none; color: #7E92A8;
+  padding: 10px 0; font-size: 13px;
+}
+.navBtn.navActive { color: #45E8BC; border-top: 2px solid #45E8BC; margin-top: -2px; }
+
+/* ---------------------------------------------------------------------- */
+/* Toast                                                                    */
+/* ---------------------------------------------------------------------- */
+#toastBox {
+  position: fixed; left: 0; right: 0; bottom: 64px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  pointer-events: none; z-index: 50;
+}
+.toastMsg {
+  background: rgba(16,24,35,0.92); border: 1px solid #33455C;
+  color: #D6E5F3; font-size: 13px; padding: 8px 14px;
+  opacity: 0; transform: translateY(8px);
+  transition: opacity 0.25s, transform 0.25s;
+}
+.toastMsg.toastShow { opacity: 1; transform: translateY(0); }
+
+/* ---------------------------------------------------------------------- */
+/* 彈窗                                                                     */
+/* ---------------------------------------------------------------------- */
+.modalOverlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(5,8,16,0.82);
+  align-items: center; justify-content: center;
+  z-index: 100;
+}
+.modalBox {
+  background: #101823; border: 2px solid #33455C;
+  padding: 20px; width: min(320px, 86vw);
+  text-align: center;
+}
+.modalTitle { font-size: 17px; font-weight: bold; color: #FFB454; margin-bottom: 10px; }
+.modalLine { font-size: 13px; margin: 6px 0; color: #D6E5F3; }
+.modalHighlight { color: #45E8BC; }
+.discoveryIconWrap { display: flex; justify-content: center; margin: 10px 0; }
+.discoveryName { font-size: 15px; color: #B784FF; }
+.modalBtn {
+  margin-top: 14px; width: 100%; padding: 10px;
+  background: #1B2836; color: #45E8BC; border: 1px solid #33455C !important; font-size: 14px;
+}

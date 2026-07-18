@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>潛燈 DEEPLIGHT</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="topBar">
+  <span class="topItem"><span class="topLabel">◆</span><span id="topGlow">0</span><span class="topSub" id="topGlowRate">0/s</span></span>
+  <span class="topItem"><span class="topLabel">深度</span><span id="topDepth">0 m</span></span>
+  <span class="topItem"><span class="topLabel">🧪</span><span id="topSamples">0</span></span>
+</div>
+
+<div id="screens">
+  <section id="screenDive" class="screen activeScreen"></section>
+  <section id="screenModules" class="screen"></section>
+  <section id="screenResearch" class="screen"></section>
+  <section id="screenSurface" class="screen"></section>
+</div>
+
+<nav id="bottomNav">
+  <button class="navBtn navActive" data-screen="dive">潛航</button>
+  <button class="navBtn" data-screen="modules">模組</button>
+  <button class="navBtn" data-screen="research">研究</button>
+  <button class="navBtn" data-screen="surface">海面</button>
+</nav>
+
+<div id="toastBox"></div>
+<div id="modalOverlay" class="modalOverlay"></div>
+
+<script src="src/utils/namespace.js"></script>
+<script src="src/utils/mathUtils.js"></script>
+<script src="src/utils/timeUtils.js"></script>
+<script src="src/utils/domUtils.js"></script>
+
+<script src="src/data/palette.js"></script>
+<script src="src/data/balance.js"></script>
+<script src="src/data/sprites.js"></script>
+<script src="src/data/zoneDefs.js"></script>
+<script src="src/data/moduleDefs.js"></script>
+<script src="src/data/researchDefs.js"></script>
+<script src="src/data/refitDefs.js"></script>
+<script src="src/data/creatureDefs.js"></script>
+<script src="src/data/achievementDefs.js"></script>
+
+<script src="src/models/SaveGame.js"></script>
+
+<script src="src/systems/saveSystem.js"></script>
+<script src="src/systems/economySystem.js"></script>
+<script src="src/systems/descentSystem.js"></script>
+<script src="src/systems/creatureSystem.js"></script>
+<script src="src/systems/researchSystem.js"></script>
+<script src="src/systems/prestigeSystem.js"></script>
+<script src="src/systems/offlineSystem.js"></script>
+<script src="src/systems/achievementSystem.js"></script>
+<script src="src/systems/gameLoopSystem.js"></script>
+
+<script src="src/ui/pixelRenderer.js"></script>
+<script src="src/ui/toast.js"></script>
+<script src="src/ui/modals.js"></script>
+<script src="src/ui/topBar.js"></script>
+<script src="src/ui/bottomNav.js"></script>
+<script src="src/ui/diveScreen.js"></script>
+<script src="src/ui/modulesScreen.js"></script>
+<script src="src/ui/researchScreen.js"></script>
+<script src="src/ui/surfaceScreen.js"></script>
+<script src="src/ui/bootstrap.js"></script>
+
+</body>
+</html>
