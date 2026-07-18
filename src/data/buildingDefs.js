@@ -60,7 +60,9 @@
         // capitalCapLevel），不是靠這裡的 effect 欄位算出來，所以這裡不重複放一份
         // maxOtherBuildingLevel（放了也不會有任何系統讀取，兩份數字還可能日後被
         // 改到不一致）。
-        effect: { popCap: scale(20, 1.25, lv, 1), cityYieldPerHour: scale(30, 1.3, lv, 5) }
+        // 兵力上限不再由城池等級決定（見 economySystem.computeEffects），改成只看
+        // 佔領了幾座城池，這裡不放 popCap。
+        effect: { cityYieldPerHour: scale(30, 1.3, lv, 5) }
       }))
     },
     warehouse: {

@@ -59,11 +59,14 @@
       summary.appendChild(U.el('div', 'subHint', '每座已攻佔城池每天固定產出元寶（主城全額、其他城池半額）：🧧 +' + eff.dailyIngotYield + '/天'));
     }
 
-    // 這裡是全勢力兵力總量的上限（由建築等級決定），跟武將個人的「統率上限」
-    // （可率領兵力上限，見武將／軍隊分頁）是兩回事——都叫「統率上限」會讓玩家
-    // 誤以為是同一個數字，改叫「兵力上限」以區分。
+    // 這裡是全勢力兵力總量的上限（由佔領的城池數決定，見 economySystem.
+    // computeEffects），跟武將個人的「統率上限」（可率領兵力上限，見武將／軍隊
+    // 分頁）是兩回事——都叫「統率上限」會讓玩家誤以為是同一個數字，改叫
+    // 「兵力上限」以區分。
     const popUsed = window.Game.Systems.Army.leadershipUsedByFaction(playerState);
-    summary.appendChild(U.el('div', 'popRow', '兵力上限：' + popUsed + ' / ' + eff.popCap));
+    const cityCount = Object.keys(playerState.cities).length;
+    summary.appendChild(U.el('div', 'popRow', '兵力上限：' + popUsed + ' / ' + eff.popCap +
+      '　（已佔領 ' + cityCount + ' 座城池，每多佔領一座 +15）'));
     const idleTypes = Object.keys(playerState.idleUnits || {}).filter((t) => playerState.idleUnits[t] > 0);
     if (idleTypes.length > 0) {
       const idleText = idleTypes.map((t) => D.unitDefById(t).name + ' x' + playerState.idleUnits[t]).join('　');
